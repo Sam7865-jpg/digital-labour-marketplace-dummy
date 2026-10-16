@@ -13,27 +13,46 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Routes
+// Database connection logic for both Local and Cloud
+let isConnected = false;
+const connectDB = async () => {
+  if (isConnected || mongoose.connection.readyState >= 1) {
+    isConnected = true;
+    return;
+  }
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+    isConnected = true;
+    console.log('MongoDB Connected Successfully');
+  } catch (err) {
+    console.error('Database connection error:', err.message);
+  }
+};
+
+// Har request aane par DB connection ensure karein
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
+});
+
+// Test route
 app.get('/', (req, res) => {
   res.send('Digital Labour Marketplace API is Running Live!');
 });
 
+// Routes
 app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes);
+
 app.use('/api/worker', workerRoutes);
+app.use('/worker', workerRoutes);
 
-const PORT = process.env.PORT || 5000;
-
-// Connect Database and Start Server
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log('MongoDB Database Connect Ho Gaya Hai!');
-    app.listen(PORT, () => {
-      console.log(`Backend server active on http://localhost:${PORT}`);
-    });
-  })
-  .catch((err) => {
-    console.error('Database connection error:', err.message);
+// Agar laptop par chal raha ho to port listen karein, Vercel par auto-handle hoga
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`Backend server active on http://localhost:${PORT}`);
   });
+}
 
 export default app;

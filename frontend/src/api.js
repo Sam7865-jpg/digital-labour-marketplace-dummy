@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'https://tough-chicken-travel.loca.lt', // Yahan localtunnel wala link paste karein
+  baseURL: 'http://localhost:5000/api', // Local testing ke liye direct 5000 port
 });
 
 API.interceptors.request.use((req) => {

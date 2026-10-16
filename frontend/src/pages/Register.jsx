@@ -29,7 +29,7 @@ export default function Register() {
         navigate('/customer-dashboard');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
+  setError(err.response?.data?.message || err.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
