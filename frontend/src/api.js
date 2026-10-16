@@ -1,8 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  // Step 3 mein jo Vercel ka backend link mila wo yahan dalein (aakhir mein /api zaroor lagana hai)
-  baseURL: 'https://digital-labour-marketplace.vercel.app/',
+  baseURL: 'https://tough-chicken-travel.loca.lt', // Yahan localtunnel wala link paste karein
 });
 
 API.interceptors.request.use((req) => {
