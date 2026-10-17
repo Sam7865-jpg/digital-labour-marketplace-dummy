@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'http://localhost:5000/api', // Local testing ke liye direct 5000 port
+  baseURL: 'https://digital-labour-marketplace-1qhz.vercel.app/', // Local testing ke liye direct 5000 port
 });
 
 API.interceptors.request.use((req) => {
