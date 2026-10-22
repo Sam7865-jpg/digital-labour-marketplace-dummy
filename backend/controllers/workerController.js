@@ -1,6 +1,6 @@
 import WorkerProfile from '../models/WorkerProfile.js';
 
-// GET: /api/worker/profile (Apna profile dekhna)
+// GET: /api/workers/profile (Apna profile dekhna)
 export const getWorkerProfile = async (req, res) => {
   try {
     const profile = await WorkerProfile.findOne({ user: req.user._id }).populate('user', 'name email phone');
@@ -13,22 +13,34 @@ export const getWorkerProfile = async (req, res) => {
   }
 };
 
-// POST / PUT: /api/worker/profile (Profile create ya update karna)
+// POST / PUT: /api/workers/profile (Profile create ya update karna)
 export const updateWorkerProfile = async (req, res) => {
   try {
-    const { occupation, category, experienceYears, hourlyRate, city, address, bio } = req.body;
+    // Frontend aur backend dono ke field names ko support karne ke liye
+    const { 
+      title, occupation, 
+      category, 
+      experience, experienceYears, 
+      hourlyRate, 
+      location, city, address, 
+      bio 
+    } = req.body;
+
+    const finalOccupation = title || occupation;
+    const finalExperience = experience ?? experienceYears;
+    const finalLocation = location || city;
 
     let profile = await WorkerProfile.findOne({ user: req.user._id });
 
     if (profile) {
       // Agar pehle se bana hua hai to UPDATE karein
-      profile.occupation = occupation || profile.occupation;
-      profile.category = category || profile.category;
-      profile.experienceYears = experienceYears ?? profile.experienceYears;
+      profile.occupation = finalOccupation || profile.occupation;
+      if (category) profile.category = category;
+      profile.experienceYears = finalExperience ?? profile.experienceYears;
       profile.hourlyRate = hourlyRate ?? profile.hourlyRate;
-      profile.city = city || profile.city;
-      profile.address = address || profile.address;
-      profile.bio = bio || profile.bio;
+      profile.city = finalLocation || profile.city;
+      if (address) profile.address = address;
+      if (bio) profile.bio = bio;
 
       await profile.save();
       return res.json({ message: 'Profile update ho gaya', profile });
@@ -37,13 +49,13 @@ export const updateWorkerProfile = async (req, res) => {
     // Agar pehli dafa bana raha hai to CREATE karein
     profile = await WorkerProfile.create({
       user: req.user._id,
-      occupation,
-      category,
-      experienceYears,
-      hourlyRate,
-      city,
-      address,
-      bio,
+      occupation: finalOccupation || 'Worker',
+      category: category || 'General',
+      experienceYears: finalExperience || 0,
+      hourlyRate: hourlyRate || 0,
+      city: finalLocation || 'Not specified',
+      address: address || '',
+      bio: bio || '',
     });
 
     res.status(201).json({ message: 'Profile kamyabi se ban gaya', profile });
