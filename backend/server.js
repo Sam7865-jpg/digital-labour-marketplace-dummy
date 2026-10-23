@@ -19,19 +19,30 @@ app.use(cors({
 
 app.use(express.json());
 
-// Routes Registration (Dono singular/plural paths allow kar diye hain)
+// Base Test Route (Deployment test karne ke liye)
+app.get('/api', (req, res) => {
+  res.json({ message: "Backend API is running on Vercel!" });
+});
+
+// Routes Registration
 app.use('/api/auth', authRoutes);
 app.use('/api/workers', workerRoutes);
 app.use('/api/worker', workerRoutes);
 app.use('/api/workers', skillRoutes);
 app.use('/api/worker', skillRoutes);
 
-const PORT = process.env.PORT || 5000;
-
 // MongoDB Connection
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log('MongoDB Database Connect Ho Gaya Hai!');
-    app.listen(PORT, () => console.log(`Backend server port ${PORT} par chal raha hai`));
-  })
-  .catch((err) => console.error('DB Connection Error:', err));
+if (process.env.MONGO_URI) {
+  mongoose.connect(process.env.MONGO_URI)
+    .then(() => console.log('MongoDB Database Connect Ho Gaya Hai!'))
+    .catch((err) => console.error('DB Connection Error:', err));
+}
+
+// Local Development Server Listener
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Backend server port ${PORT} par chal raha hai`);
+});
+
+// VERCEL REQUIREMENT: ES Module Export
+export default app;
