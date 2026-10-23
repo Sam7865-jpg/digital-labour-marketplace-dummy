@@ -1,7 +1,7 @@
-const express = require('express');
-const router = express.Router();
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+import express from 'express';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
+const router = express.Router();
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 router.post('/extract-skills', async (req, res) => {
@@ -45,4 +45,4 @@ router.post('/extract-skills', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;
