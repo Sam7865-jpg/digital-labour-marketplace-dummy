@@ -11,21 +11,24 @@ import skillRoutes from './routes/skillRoutes.js';
 
 const app = express();
 
-// CORS configuration (Codespaces ke dynamic URLs aur credentials ke liye)
+// CORS Configuration
 app.use(cors({
-  origin: true, // Kisi bhi dynamic origin/codespace ko allow karega
+  origin: true,
   credentials: true
 }));
 
 app.use(express.json());
 
-// Routes register karein (Frontend requests ke sath match karne ke liye 'workers' use kiya hai)
+// Routes Registration (Dono singular/plural paths allow kar diye hain)
 app.use('/api/auth', authRoutes);
 app.use('/api/workers', workerRoutes);
+app.use('/api/worker', workerRoutes);
 app.use('/api/workers', skillRoutes);
+app.use('/api/worker', skillRoutes);
 
 const PORT = process.env.PORT || 5000;
 
+// MongoDB Connection
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log('MongoDB Database Connect Ho Gaya Hai!');

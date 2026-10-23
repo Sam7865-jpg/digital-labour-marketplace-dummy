@@ -1,10 +1,48 @@
-import express from 'express';
-import { extractAndSaveSkills, getExtractedSkills } from '../controllers/skillController.js';
-import { protect, authorizeRoles } from '../middleware/authMiddleware.js';
-
+const express = require('express');
 const router = express.Router();
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-router.get('/skills', protect, authorizeRoles('worker'), getExtractedSkills);
-router.post('/extract-skills', protect, authorizeRoles('worker'), extractAndSaveSkills);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-export default router;
+router.post('/extract-skills', async (req, res) => {
+  try {
+    const { experienceText } = req.body;
+
+    if (!experienceText) {
+      return res.status(400).json({ message: "Experience text is required" });
+    }
+
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `
+      Extract skills from this worker text and return ONLY a valid JSON object in this exact format:
+      {
+        "extractedSkills": [
+          { "skillName": "Skill Name", "proficiency": "Intermediate" }
+        ]
+      }
+
+      Text: "${experienceText}"
+    `;
+
+    const result = await model.generateContent(prompt);
+    const responseText = result.response.text();
+
+    const cleanJson = responseText.replace(/```json|```/g, '').trim();
+    const parsedData = JSON.parse(cleanJson);
+
+    return res.status(200).json({
+      message: "AI ne kamyabi se skills extract kar lein!",
+      extractedSkills: parsedData.extractedSkills || []
+    });
+
+  } catch (error) {
+    console.error("Gemini API Error:", error);
+    return res.status(500).json({
+      message: "AI Skill Extraction failed",
+      error: error.message
+    });
+  }
+});
+
+module.exports = router;
