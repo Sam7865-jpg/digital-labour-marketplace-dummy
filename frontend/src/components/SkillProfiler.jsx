@@ -1,272 +1,135 @@
-import { useState, useEffect } from 'react';
-import API from '../api';
+import React, { useState } from 'react';
 
-export default function SkillProfiler() {
+const SkillProfiler = ({ initialCategory = '' }) => {
   const [experienceText, setExperienceText] = useState('');
-  const [extractedSkills, setExtractedSkills] = useState([]);
-  const [potentialSkills, setPotentialSkills] = useState([]);
-  const [message, setMessage] = useState({ text: '', type: '' });
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [userData, setUserData] = useState({});
+  const [category, setCategory] = useState(initialCategory);
   const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(true);
+  const [aiResult, setAiResult] = useState(null);
+  const [error, setError] = useState('');
 
-  const SKILLS_ENDPOINT = '/worker/skills';
-  const EXTRACT_ENDPOINT = '/worker/extract-skills';
-
-  useEffect(() => {
-    const fetchSkills = async () => {
-      try {
-        const res = await API.get(SKILLS_ENDPOINT);
-        if (res?.data) {
-          setExperienceText(res.data.experienceText || '');
-          setExtractedSkills(res.data.extractedSkills || []);
-          setPotentialSkills(res.data.potentialSkills || res.data.skillProfile?.potentialSkills || []);
-        }
-      } catch (err) {
-        console.error('Error fetching skills:', err);
-      } finally {
-        const localUser = JSON.parse(localStorage.getItem('user') || '{}');
-        setUserData(localUser);
-        setFetching(false);
-      }
-    };
-
-    fetchSkills();
-  }, []);
-
-  const handleAIExtract = async (e) => {
+  const handleAnalyze = async (e) => {
     e.preventDefault();
     if (!experienceText.trim()) {
-      setMessage({ text: 'Barah-e-karam apna tajurba tafseel se likhein.', type: 'error' });
+      setError('Aapna work experience/bio yahan likhein.');
       return;
     }
-
+    setError('');
     setLoading(true);
-    setMessage({ text: '', type: '' });
 
     try {
-      const res = await API.post(EXTRACT_ENDPOINT, { experienceText });
-      
-      setMessage({ 
-        text: res.data.message || 'AI ne kamyabi se skills extract kar lein!', 
-        type: 'success' 
+      const res = await fetch('/api/skills/generate-ai-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ experienceText, category })
       });
-
-      const skills = res.data.skillProfile ? res.data.skillProfile.extractedSkills : res.data.extractedSkills;
-      const recs = res.data.skillProfile ? res.data.skillProfile.potentialSkills : res.data.potentialSkills;
-      
-      setExtractedSkills(skills || []);
-      setPotentialSkills(recs || []);
-    } catch (err) {
-      console.error('AI Extraction Error:', err);
-      setMessage({ 
-        text: err.response?.data?.message || 'AI extraction mein error aaya. Backend server check karein.', 
-        type: 'error' 
-      });
-    } finally {
+      const data = await res.json();
       setLoading(false);
+
+      if (data.success) {
+        setAiResult(data.data);
+      } else {
+        setError(data.message || 'AI Profiling me error aaya.');
+      }
+    } catch (err) {
+      setLoading(false);
+      setError('Server se connectivity issue hai.');
     }
   };
 
-  const getRelevantSuggestions = () => {
-    const text = (experienceText + " " + extractedSkills.map(s => s.skillName || s).join(" ")).toLowerCase();
-
-    if (text.includes('electric') || text.includes('wiring') || text.includes('circuit') || text.includes('bijli')) {
-      return [
-        'Advanced Circuit Troubleshooting',
-        'Solar Panel Installation & Maintenance',
-        'Industrial Electrical Safety Standards',
-        'Smart Home Automation Wiring'
-      ];
-    } else if (text.includes('plumb') || text.includes('pipe') || text.includes('water') || text.includes('sanitary') || text.includes('nal')) {
-      return [
-        'Advanced Pipe Fitting & Welding',
-        'Modern Drainage System Design',
-        'Water Filtration & Pump Maintenance',
-        'Advanced Sanitary Installation'
-      ];
-    } else if (text.includes('mason') || text.includes('brick') || text.includes('mistry') || text.includes('construction') || text.includes('cement')) {
-      return [
-        'Civil Engineering Fundamentals Course',
-        'Advanced Blueprint & Plan Reading',
-        'Structural Safety Standards & OSHA',
-        'Project Cost Estimation & Budgeting'
-      ];
-    } else {
-      return [
-        'Advanced Professional Certification',
-        'Safety Standards & Compliance',
-        'Client Communication & Quality Assurance',
-        'Emergency Quick Response Management'
-      ];
-    }
+  const handleAddPotentialSkill = (skillName) => {
+    if (!aiResult) return;
+    setAiResult(prev => ({
+      ...prev,
+      extractedSkills: [...prev.extractedSkills, { name: skillName, proficiency: 'Intermediate' }],
+      potentialSkills: prev.potentialSkills.filter(s => s !== skillName)
+    }));
   };
-
-  if (fetching) {
-    return (
-      <div style={{ maxWidth: '800px', margin: '20px auto', textAlign: 'center', padding: '20px', color: '#64748b' }}>
-        Loading skill profile...
-      </div>
-    );
-  }
 
   return (
-    <div style={{ maxWidth: '800px', margin: '10px auto', padding: '15px', background: '#fff', borderRadius: '12px' }}>
-      <h2 style={{ color: '#0f172a', marginBottom: '8px', fontSize: '22px', fontWeight: 'bold' }}>
-        AI Experience & Skill Profiler
-      </h2>
-      <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '20px' }}>
-        Apna tajurba ya kaam ki tafseel yahan likhein, AI aapka data analyze karke ek professional structured profile taiyar karega:
+    <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '10px', border: '2px solid #8b5cf6' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <h3 style={{ margin: 0, color: '#5b21b6' }}>✨ Module 2: AI Experience & Skill Profiler</h3>
+        <span style={{ background: '#ddd6fe', color: '#5b21b6', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: 'bold' }}>
+          Gemini AI Engine
+        </span>
+      </div>
+
+      <p style={{ color: '#475569', fontSize: '14px', marginBottom: '16px' }}>
+        Raw experience text dakhil karein. Gemini AI automatically skills identify karega, category mapping karega, aur potential growth skills suggest karega.
       </p>
 
-      {message.text && (
-        <p style={{
-          color: message.type === 'error' ? '#dc2626' : '#16a34a',
-          fontWeight: 'bold',
-          marginBottom: '15px',
-          background: message.type === 'error' ? '#fef2f2' : '#f0fdf4',
-          padding: '10px',
-          borderRadius: '6px',
-          border: `1px solid ${message.type === 'error' ? '#fecaca' : '#bbf7d0'}`
-        }}>
-          {message.text}
-        </p>
-      )}
+      <form onSubmit={handleAnalyze}>
+        <div style={{ marginBottom: '12px' }}>
+          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px' }}>Service Domain / Category</label>
+          <input 
+            type="text" 
+            value={category} 
+            onChange={(e) => setCategory(e.target.value)}
+            placeholder="e.g. Electrician, Plumber, Carpenter"
+            style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+          />
+        </div>
 
-      <form onSubmit={handleAIExtract} style={{ marginBottom: '25px' }}>
-        <textarea
-          rows="4"
-          placeholder="Misal: Main 5 saal se wiring, circuit breaker fixing aur ac repair ka kaam kar raha hoon..."
-          value={experienceText}
-          onChange={(e) => setExperienceText(e.target.value)}
+        <div style={{ marginBottom: '12px' }}>
+          <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '4px' }}>Work Experience Bio</label>
+          <textarea 
+            rows="4"
+            value={experienceText}
+            onChange={(e) => setExperienceText(e.target.value)}
+            placeholder="Describe your practical work experience, tools used, and key expertise in detail..."
+            style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+          />
+        </div>
+
+        {error && <p style={{ color: '#dc2626', fontSize: '14px' }}>{error}</p>}
+
+        <button 
+          type="submit" 
           disabled={loading}
-          style={{
-            width: '100%', padding: '12px', marginBottom: '15px', borderRadius: '6px',
-            border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none', color: '#0f172a',
-            fontWeight: '500', boxSizing: 'border-box'
-          }}
-        />
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            width: '100%', padding: '12px', background: loading ? '#93c5fd' : '#2563eb',
-            color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold',
-            cursor: loading ? 'not-allowed' : 'pointer', fontSize: '15px'
-          }}
+          style={{ background: '#7c3aed', color: '#ffffff', padding: '10px 18px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}
         >
-          {loading ? 'AI Profile Generate Kar Raha Hai... ⏳' : 'Generate & Save Structured Profile 🚀'}
+          {loading ? '✨ Gemini AI Analyzing...' : '✨ Generate AI Skill Profile'}
         </button>
       </form>
 
-      {/* --- CLICKABLE STRUCTURED PROFILE CARD --- */}
-      {extractedSkills.length > 0 && (
-        <div
-          onClick={() => setShowDetailModal(true)}
-          style={{
-            border: '2px solid #3b82f6',
-            borderRadius: '10px',
-            padding: '20px',
-            background: '#f8fafc',
-            cursor: 'pointer',
-            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)'
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '45px', height: '45px', background: '#2563eb', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: 'bold' }}>
-                👤
-              </div>
-              <div>
-                <h3 style={{ margin: '0 0 3px 0', color: '#0f172a', fontSize: '16px' }}>{userData.name || 'Worker Profile'}</h3>
-                <span style={{ background: '#dbeafe', color: '#1e40af', padding: '2px 8px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}>
-                  Verified Professional • Click for Details 🔍
-                </span>
-              </div>
-            </div>
-            <span style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '13px' }}>View Detail &rarr;</span>
+      {aiResult && (
+        <div style={{ marginTop: '20px', padding: '16px', background: '#ffffff', borderRadius: '8px', border: '1px solid #c084fc' }}>
+          <h4 style={{ color: '#6d28d9', marginTop: 0 }}>Structured Worker Skill Profile Output</h4>
+          
+          <p><strong>Mapped Service Category:</strong> <span style={{ background: '#e0e7ff', color: '#3730a3', padding: '3px 8px', borderRadius: '4px', fontWeight: 'bold' }}>{aiResult.category}</span></p>
+
+          <div style={{ marginTop: '12px' }}>
+            <strong>Extracted Skills & Proficiency Levels:</strong>
+            <ul style={{ marginTop: '6px', paddingLeft: '20px' }}>
+              {aiResult.extractedSkills.map((s, idx) => (
+                <li key={idx} style={{ marginBottom: '4px' }}>
+                  <strong>{s.name}</strong> — <span style={{ color: '#059669', fontWeight: 'bold' }}>{s.proficiency}</span>
+                </li>
+              ))}
+            </ul>
           </div>
 
-          <div style={{ marginTop: '12px', color: '#475569', fontSize: '13px' }}>
-            <strong>Extracted Skills Preview:</strong> {extractedSkills.map(s => s.skillName || s).join(', ')}
-          </div>
-        </div>
-      )}
-
-      {/* --- DETAILED PROFILE MODAL (POPUP) --- */}
-      {showDetailModal && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-          backgroundColor: 'rgba(0, 0, 0, 0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1100
-        }}>
-          <div style={{
-            background: 'white', padding: '25px', borderRadius: '12px', width: '90%', maxWidth: '600px',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.2)', position: 'relative', maxHeight: '90vh', overflowY: 'auto'
-          }}>
-
-            <button
-              onClick={() => setShowDetailModal(false)}
-              style={{
-                position: 'absolute', top: '15px', right: '15px', background: '#ef4444', color: 'white',
-                border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', fontWeight: 'bold'
-              }}
-            >
-              ✕
-            </button>
-
-            <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '15px', marginBottom: '15px' }}>
-              <h2 style={{ margin: '0 0 5px 0', color: '#0f172a' }}>{userData.name || 'Worker Name'}</h2>
-              <p style={{ margin: 0, color: '#64748b', fontSize: '13px' }}>Email: {userData.email || 'N/A'}</p>
-            </div>
-
-            <div style={{ marginBottom: '15px' }}>
-              <h4 style={{ color: '#334155', marginBottom: '6px', fontSize: '14px' }}>📄 Complete Professional Bio:</h4>
-              <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', color: '#334155', fontSize: '13px', lineHeight: '1.5' }}>
-                {experienceText || 'No experience details provided.'}
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '15px' }}>
-              <h4 style={{ color: '#334155', marginBottom: '8px', fontSize: '14px' }}>⚡ Extracted Skills & Proficiency:</h4>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {extractedSkills.map((s, index) => (
-                  <div key={index} style={{ background: '#e0e7ff', color: '#3730a3', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: '600' }}>
-                    🛠️ {s.skillName || s} {s.proficiency && <span style={{ background: '#c7d2fe', padding: '2px 5px', borderRadius: '4px', marginLeft: '4px' }}>{s.proficiency}</span>}
-                  </div>
+          {aiResult.potentialSkills && aiResult.potentialSkills.length > 0 && (
+            <div style={{ marginTop: '16px' }}>
+              <strong>AI Recommended Potential Skills (Click to Add):</strong>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                {aiResult.potentialSkills.map((skill, idx) => (
+                  <button 
+                    key={idx}
+                    type="button"
+                    onClick={() => handleAddPotentialSkill(skill)}
+                    style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #f59e0b', padding: '5px 12px', borderRadius: '16px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}
+                  >
+                    + {skill}
+                  </button>
                 ))}
               </div>
             </div>
-
-            {/* AI Potential Skill Suggestions */}
-            {extractedSkills.length > 0 && (
-              <div style={{ marginBottom: '20px', background: '#fefce8', border: '1px solid #fde047', borderRadius: '8px', padding: '15px' }}>
-                <h4 style={{ color: '#854d0e', marginBottom: '6px', fontSize: '14px' }}>
-                  💡 AI Potential Skill Suggestions (Relevant to Your Field)
-                </h4>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
-                  {(potentialSkills.length > 0 ? potentialSkills : getRelevantSuggestions()).map((suggestion, idx) => (
-                    <span key={idx} style={{ background: '#fef08a', color: '#713f12', padding: '4px 10px', borderRadius: '4px', fontSize: '12px', fontWeight: '600' }}>
-                      ✨ {typeof suggestion === 'string' ? suggestion : suggestion.skillName || suggestion}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <button
-              onClick={() => setShowDetailModal(false)}
-              style={{
-                width: '100%', padding: '10px', background: '#0f172a', color: 'white',
-                border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px'
-              }}
-            >
-              Close Detailed Profile
-            </button>
-
-          </div>
+          )}
         </div>
       )}
     </div>
   );
-}
+};
+
+export default SkillProfiler;
