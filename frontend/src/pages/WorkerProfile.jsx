@@ -21,22 +21,33 @@ const WorkerProfile = () => {
   const [showProfilerModal, setShowProfilerModal] = useState(false);
   const [message, setMessage] = useState('');
 
-  // Handle Sync from AI Profiler
+  // Handle Live Sync from AI Profiler
   const handleProfileSynced = (aiData) => {
     if (aiData.professionalSummary) {
       setAiSummary(aiData.professionalSummary);
     }
-    if (aiData.categorizedSkills) {
-      const flattened = [];
+
+    let extractedList = [];
+
+    if (aiData.categorizedSkills && aiData.categorizedSkills.length > 0) {
       aiData.categorizedSkills.forEach(group => {
-        group.skills.forEach(skill => {
-          flattened.push({ name: skill.name, proficiency: skill.proficiency, category: group.categoryName });
-        });
+        if (group.skills) {
+          group.skills.forEach(s => {
+            extractedList.push({ name: s.name, proficiency: s.proficiency || 'Intermediate' });
+          });
+        }
       });
-      setAiSkills(flattened);
+    } else if (aiData.extractedSkills && aiData.extractedSkills.length > 0) {
+      extractedList = aiData.extractedSkills.map(s => ({
+        name: s.name,
+        proficiency: s.proficiency || 'Intermediate'
+      }));
     }
-    setMessage('AI Skills & Professional Summary synchronized with Digital Identity Card!');
-    setTimeout(() => setMessage(''), 4000);
+
+    setAiSkills(extractedList);
+    setMessage('✨ Digital Identity Card live updated with AI Verified Skills & Summary!');
+    setShowProfilerModal(false); // Modal auto-close taake user ko card pe live change nazar aaye
+    setTimeout(() => setMessage(''), 5000);
   };
 
   const handleSaveProfile = (e) => {
@@ -81,7 +92,7 @@ const WorkerProfile = () => {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '24px' }}>
           
-          {/* LABOUR IDENTITY CARD (Auto-Synced with AI Summary & Skills) */}
+          {/* LABOUR IDENTITY CARD (Live Updated with AI Data) */}
           <div style={{ background: '#0f172a', color: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <span style={{ fontSize: '11px', fontWeight: 'bold', letterSpacing: '1px', color: '#94a3b8' }}>LABOUR IDENTITY CARD</span>
@@ -111,9 +122,9 @@ const WorkerProfile = () => {
 
             {/* AI Verified Summary Section */}
             {aiSummary && (
-              <div style={{ background: '#1e293b', padding: '10px 12px', borderRadius: '8px', marginBottom: '16px', borderLeft: '3px solid #a855f7' }}>
+              <div style={{ background: '#1e293b', padding: '12px', borderRadius: '8px', marginBottom: '16px', borderLeft: '4px solid #a855f7' }}>
                 <span style={{ fontSize: '10px', color: '#c084fc', fontWeight: 'bold', letterSpacing: '0.5px' }}>✨ AI VERIFIED SUMMARY</span>
-                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#e2e8f0', lineHeight: '1.3' }}>{aiSummary}</p>
+                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#e2e8f0', lineHeight: '1.4' }}>{aiSummary}</p>
               </div>
             )}
 
@@ -123,7 +134,7 @@ const WorkerProfile = () => {
                 <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 'bold', display: 'block', marginBottom: '6px' }}>VERIFIED TRADE SKILLS</span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {aiSkills.map((s, idx) => (
-                    <span key={idx} style={{ background: '#334155', color: '#f8fafc', padding: '3px 8px', borderRadius: '10px', fontSize: '11px', border: '1px solid #475569' }}>
+                    <span key={idx} style={{ background: '#334155', color: '#f8fafc', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', border: '1px solid #475569' }}>
                       {s.name} <strong style={{ color: '#34d399', fontSize: '10px' }}>({s.proficiency})</strong>
                     </span>
                   ))}
@@ -137,7 +148,7 @@ const WorkerProfile = () => {
             </div>
           </div>
 
-          {/* Profile Form */}
+          {/* Registration Form */}
           <div style={{ background: '#fff', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
             <form onSubmit={handleSaveProfile}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
