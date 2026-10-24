@@ -11,7 +11,6 @@ dotenv.config();
 
 const app = express();
 
-// CORS configuration (Browser fetch block issue fix)
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -20,34 +19,60 @@ app.use(cors({
 
 app.use(express.json());
 
-// Favicon 500 error avoid karne ke liye
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
-// Health Check Endpoint
 app.get('/', (req, res) => {
   res.status(200).json({ status: 'OK', message: 'Digital Labour Marketplace API Running' });
 });
 
-// API Routes
+// Serverless Mongoose Connection Caching (Prevents Buffering Timeouts)
+let cached = global.mongoose;
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
+
+const connectDB = async () => {
+  if (cached.conn && mongoose.connection.readyState === 1) {
+    return cached.conn;
+  }
+
+  if (!cached.promise) {
+    const opts = {
+      bufferCommands: false,
+      serverSelectionTimeoutMS: 5000,
+    };
+
+    cached.promise = mongoose.connect(process.env.MONGO_URI, opts).then((m) => {
+      console.log('MongoDB Connected Successfully');
+      return m;
+    });
+  }
+
+  try {
+    cached.conn = await cached.promise;
+  } catch (e) {
+    cached.promise = null;
+    console.error('MongoDB Connection Error:', e.message);
+    throw e;
+  }
+
+  return cached.conn;
+};
+
+// Ensure DB is connected BEFORE handling API routes
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Database connection failed: ' + err.message });
+  }
+});
+
+// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/workers', workerRoutes);
 app.use('/api/skills', skillRoutes);
-
-// Database Connection with Fallback
-const connectDB = async () => {
-  if (mongoose.connection.readyState >= 1) return;
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log('MongoDB Connected Successfully');
-  } catch (err) {
-    console.error('MongoDB Connection Error:', err.message);
-  }
-};
-
-app.use(async (req, res, next) => {
-  await connectDB();
-  next();
-});
 
 const PORT = process.env.PORT || 5000;
 if (process.env.NODE_ENV !== 'production') {
