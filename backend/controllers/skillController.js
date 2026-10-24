@@ -1,76 +1,113 @@
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import SkillProfile from '../models/SkillProfile.js';
 
-// POST: /api/worker/extract-skills
+const keywordSkillExtractor = (text) => {
+  const lowerText = text.toLowerCase();
+  const skillsFound = [];
+
+  const skillDatabase = [
+    { name: 'Plumbing', keywords: ['plumb', 'pipe', 'leak', 'drain', 'faucet', 'sink', 'toilet'] },
+    { name: 'Electrical Works', keywords: ['electric', 'wiring', 'circuit', 'voltage', 'switch', 'socket'] },
+    { name: 'Carpentry', keywords: ['wood', 'carpenter', 'furniture', 'cabinet', 'door', 'timber'] },
+    { name: 'Masonry', keywords: ['brick', 'concrete', 'cement', 'mason', 'wall', 'plaster'] },
+    { name: 'Painting', keywords: ['paint', 'wall', 'primer', 'coat', 'brush', 'roller'] },
+    { name: 'Welding', keywords: ['weld', 'metal', 'steel', 'iron', 'fabrication'] },
+    { name: 'HVAC / AC Repair', keywords: ['ac', 'air conditioner', 'hvac', 'cooling', 'refrigerant', 'compressor'] }
+  ];
+
+  skillDatabase.forEach((item) => {
+    if (item.keywords.some((kw) => lowerText.includes(kw))) {
+      skillsFound.push({ skillName: item.name, proficiency: 'Intermediate' });
+    }
+  });
+
+  return skillsFound.length > 0 ? skillsFound : [{ skillName: 'General Labor', proficiency: 'Beginner' }];
+};
+
 export const extractAndSaveSkills = async (req, res) => {
   try {
     const { experienceText } = req.body;
-    
-    let skillProfile = await SkillProfile.findOne({ user: req.user._id });
+    const userId = req.user._id;
 
-    // AI / Keyword matching simulation with plumber and other keywords
-    const lowercaseText = experienceText.toLowerCase();
-    let detectedSkills = [];
-
-    const commonSkills = [
-      { keyword: 'plumber', name: 'Plumbing Services' },
-      { keyword: 'plumbing', name: 'Plumbing' },
-      { keyword: 'piping', name: 'Pipe Fitting' },
-      { keyword: 'leakage', name: 'Leakage Repair' },
-      { keyword: 'sanitary', name: 'Sanitary Fittings' },
-      { keyword: 'maintenance', name: 'General Maintenance' },
-      { keyword: 'wiring', name: 'Electrical Wiring' },
-      { keyword: 'circuit', name: 'Circuit Breaker Fixing' },
-      { keyword: 'ac repair', name: 'AC Repair & Installation' },
-      { keyword: 'carpentry', name: 'Carpentry' },
-      { keyword: 'painting', name: 'Painting' },
-      { keyword: 'solar', name: 'Solar Panel Installation' },
-      { keyword: 'welding', name: 'Welding' },
-      { keyword: 'cleaning', name: 'Cleaning' }
-    ];
-
-    commonSkills.forEach(item => {
-      if (lowercaseText.includes(item.keyword)) {
-        const exists = detectedSkills.some(s => s.skillName === item.name);
-        if (!exists) {
-          detectedSkills.push({ skillName: item.name, proficiency: 'Expert' });
-        }
-      }
-    });
-
-    // Agar koi specific keyword match na ho, toh pura text copy karne ki bajaye aik behtar default tag dein
-    if (detectedSkills.length === 0 && experienceText.trim() !== '') {
-      detectedSkills.push({ skillName: 'General Skilled Worker', proficiency: 'Intermediate' });
+    if (!experienceText) {
+      return res.status(400).json({ message: 'Experience text is required' });
     }
 
-    if (skillProfile) {
-      skillProfile.experienceText = experienceText;
-      skillProfile.extractedSkills = detectedSkills;
-      await skillProfile.save();
+    let extractedSkills = [];
+
+    if (process.env.GEMINI_API_KEY) {
+      try {
+        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+        const model = genAI.getGenerativeModel({ model: modelName });
+
+        const prompt = `Analyze the following worker experience text and extract technical or trade skills with estimated proficiency (Beginner, Intermediate, Expert).
+Return ONLY valid raw JSON with this exact structure (no markdown formatting, no code blocks):
+{
+  "skills": [
+    { "skillName": "Skill Name", "proficiency": "Proficiency Level" }
+  ]
+}
+
+Experience Text:
+${experienceText}`;
+
+        const result = await model.generateContent(prompt);
+        const responseText = result.response.text();
+        const cleanedText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsedData = JSON.parse(cleanedText);
+
+        if (parsedData.skills && Array.isArray(parsedData.skills)) {
+          extractedSkills = parsedData.skills;
+        }
+      } catch (geminiError) {
+        console.error('Gemini extraction failed, using fallback matcher:', geminiError.message);
+      }
+    }
+
+    if (extractedSkills.length === 0) {
+      extractedSkills = keywordSkillExtractor(experienceText);
+    }
+
+    let profile = await SkillProfile.findOne({ userId });
+    if (profile) {
+      profile.experienceText = experienceText;
+      profile.extractedSkills = extractedSkills;
+      await profile.save();
     } else {
-      skillProfile = await SkillProfile.create({
-        user: req.user._id,
+      profile = await SkillProfile.create({
+        userId,
         experienceText,
-        extractedSkills: detectedSkills
+        extractedSkills
       });
     }
 
-    // UPDATE: Poori profile return kar rahe hain taake frontend par structured profile show ho sakay
-    res.json({
-      message: 'AI ne kamyabi se structured profile taiyar aur save kar di hai!',
-      skillProfile
+    return res.status(200).json({
+      message: 'Skills extracted and profile saved successfully',
+      skillProfile: profile
     });
-
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Skill extraction error:', error);
+    res.status(500).json({ message: 'Server error during skill extraction', error: error.message });
   }
 };
 
-// GET: /api/worker/skills
 export const getExtractedSkills = async (req, res) => {
   try {
-    const skillProfile = await SkillProfile.findOne({ user: req.user._id });
-    res.json(skillProfile || { experienceText: '', extractedSkills: [] });
+    const userId = req.user._id;
+    const profile = await SkillProfile.findOne({ userId });
+
+    if (!profile) {
+      return res.status(404).json({ message: 'No skill profile found' });
+    }
+
+    return res.status(200).json({
+      experienceText: profile.experienceText,
+      extractedSkills: profile.extractedSkills,
+      skillProfile: profile
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Fetch skills error:', error);
+    res.status(500).json({ message: 'Server error fetching skills', error: error.message });
   }
 };
