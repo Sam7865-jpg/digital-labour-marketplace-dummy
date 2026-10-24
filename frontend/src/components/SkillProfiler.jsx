@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://digital-labour-marketplace-dummy-ba.vercel.app';
 
-const SkillProfiler = ({ initialCategory = '' }) => {
+const SkillProfiler = ({ initialCategory = '', onSyncProfile }) => {
   const [trade, setTrade] = useState(initialCategory || 'Plumber');
   const [experienceYears, setExperienceYears] = useState('5');
   const [toolsOperated, setToolsOperated] = useState('');
@@ -11,19 +11,20 @@ const SkillProfiler = ({ initialCategory = '' }) => {
   const [isListening, setIsListening] = useState(false);
   const [loading, setLoading] = useState(false);
   const [aiResult, setAiResult] = useState(null);
+  const [synced, setSynced] = useState(false);
   const [error, setError] = useState('');
 
-  // Voice Input (Speech-to-Text using Web Speech API)
+  // Voice Input Speech-to-Text
   const handleVoiceInput = () => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      alert("Aap ke browser mein voice recognition support nahi hai. Please Google Chrome / Edge use karein.");
+      alert("Browser speech recognition not supported. Please use Google Chrome.");
       return;
     }
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     
-    recognition.lang = 'ur-PK'; // Urdu / Roman Urdu speech recognition
+    recognition.lang = 'ur-PK';
     recognition.continuous = false;
     recognition.interimResults = false;
 
@@ -42,11 +43,12 @@ const SkillProfiler = ({ initialCategory = '' }) => {
   const handleAnalyze = async (e) => {
     e.preventDefault();
     if (!experienceText.trim() && !toolsOperated.trim()) {
-      setError('Kambakhsh experience text ya tools ka zikr zaroori hai.');
+      setError('Experience text ya tools ka zikr zaroori hai.');
       return;
     }
     setError('');
     setLoading(true);
+    setSynced(false);
 
     try {
       const payload = {
@@ -68,16 +70,23 @@ const SkillProfiler = ({ initialCategory = '' }) => {
       if (data.success) {
         setAiResult(data.data);
       } else {
-        setError(data.message || 'AI Profiling mein issue aaya.');
+        setError(data.message || 'AI Profiling error.');
       }
     } catch (err) {
       setLoading(false);
-      setError('Server connection error. URL check karein.');
+      setError('Server connection error. API URL check karein.');
+    }
+  };
+
+  const handleApplyToProfileCard = () => {
+    if (aiResult && onSyncProfile) {
+      onSyncProfile(aiResult);
+      setSynced(true);
     }
   };
 
   return (
-    <div style={{ padding: '24px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #cbd5e1' }}>
+    <div style={{ padding: '24px', background: '#ffffff', borderRadius: '12px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <h3 style={{ margin: 0, color: '#4c1d95', fontSize: '20px' }}>✨ AI Experience & Skill Profiler</h3>
         <span style={{ background: '#ede9fe', color: '#6d28d9', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>
@@ -86,7 +95,6 @@ const SkillProfiler = ({ initialCategory = '' }) => {
       </div>
 
       <form onSubmit={handleAnalyze}>
-        {/* Structured Input Row 1: Primary Trade & Years of Experience */}
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px', marginBottom: '14px' }}>
           <div>
             <label style={{ display: 'block', fontWeight: 'bold', fontSize: '13px', marginBottom: '4px', color: '#334155' }}>
@@ -96,7 +104,7 @@ const SkillProfiler = ({ initialCategory = '' }) => {
               type="text" 
               value={trade} 
               onChange={(e) => setTrade(e.target.value)}
-              placeholder="e.g. Plumber, Electrician, Carpenter"
+              placeholder="e.g. Plumber, Electrician"
               style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px' }}
             />
           </div>
@@ -114,28 +122,24 @@ const SkillProfiler = ({ initialCategory = '' }) => {
           </div>
         </div>
 
-        {/* Structured Input Row 2: Tools & Equipment Operated */}
         <div style={{ marginBottom: '14px' }}>
           <label style={{ display: 'block', fontWeight: 'bold', fontSize: '13px', marginBottom: '4px', color: '#334155' }}>
-            Tools & Machinery Operated (Comma Separated)
+            Tools & Machinery Operated
           </label>
           <input 
             type="text" 
             value={toolsOperated} 
             onChange={(e) => setToolsOperated(e.target.value)}
-            placeholder="e.g. PPRC Welding Machine, Pipe Threader, Drill Machine, Pressure Tester"
+            placeholder="e.g. PPRC Machine, Pipe Threader, Drill Machine"
             style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px' }}
           />
         </div>
 
-        {/* Experience Bio Textarea with Voice Input */}
         <div style={{ marginBottom: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
             <label style={{ fontWeight: 'bold', fontSize: '13px', color: '#334155' }}>
               Detailed Experience Bio (Urdu / Roman Urdu / English)
             </label>
-            
-            {/* Speech-To-Text Voice Button */}
             <button
               type="button"
               onClick={handleVoiceInput}
@@ -147,13 +151,10 @@ const SkillProfiler = ({ initialCategory = '' }) => {
                 borderRadius: '16px',
                 fontSize: '12px',
                 fontWeight: 'bold',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px'
+                cursor: 'pointer'
               }}
             >
-              <span>🎤</span> {isListening ? 'Boliey (Listening...)' : 'Voice Input (Bol Kar Likhein)'}
+              <span>🎤</span> {isListening ? 'Listening...' : 'Voice Input'}
             </button>
           </div>
 
@@ -161,7 +162,7 @@ const SkillProfiler = ({ initialCategory = '' }) => {
             rows="4"
             value={experienceText}
             onChange={(e) => setExperienceText(e.target.value)}
-            placeholder="Apne kaam ka tajurba yahan bayan karein ya mic button daba kar bolein (e.g., Mujhe 6 saal ka experience hai piping aur leak repair mein...)"
+            placeholder="Describe your practical work experience or speak using the mic..."
             style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '14px' }}
           />
         </div>
@@ -171,27 +172,73 @@ const SkillProfiler = ({ initialCategory = '' }) => {
         <button 
           type="submit" 
           disabled={loading}
-          style={{ background: '#7c3aed', color: '#ffffff', padding: '10px 20px', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', width: '100%', fontSize: '15px' }}
+          style={{ background: '#7c3aed', color: '#ffffff', padding: '12px', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', width: '100%', fontSize: '15px' }}
         >
-          {loading ? '✨ Gemini AI Extracting Trade Profile...' : '✨ Generate AI Skill Profile'}
+          {loading ? '✨ Gemini AI Analyzing Profile...' : '✨ Generate AI Skill Profile'}
         </button>
       </form>
 
-      {/* Structured Output Rendering */}
+      {/* Step 4 Structured Skill Profile Output */}
       {aiResult && (
-        <div style={{ marginTop: '20px', padding: '18px', background: '#ffffff', borderRadius: '10px', border: '1px solid #ddd6fe' }}>
-          <h4 style={{ color: '#5b21b6', marginTop: 0, marginBottom: '10px' }}>Structured Worker Skill Profile</h4>
-          <p style={{ margin: '4px 0', fontSize: '14px' }}><strong>Category:</strong> {aiResult.category}</p>
+        <div style={{ marginTop: '24px', padding: '20px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #c084fc' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <h4 style={{ color: '#5b21b6', margin: 0, fontSize: '16px' }}>Structured Worker Skill Profile</h4>
+            
+            {/* Auto Sync Button */}
+            <button
+              onClick={handleApplyToProfileCard}
+              style={{
+                background: synced ? '#059669' : '#2563eb',
+                color: '#ffffff',
+                border: 'none',
+                padding: '6px 14px',
+                borderRadius: '6px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                cursor: 'pointer'
+              }}
+            >
+              {synced ? '✓ Synced to Digital ID' : '⚡ Sync to Digital Identity Card'}
+            </button>
+          </div>
 
-          <div style={{ marginTop: '12px' }}>
-            <strong style={{ fontSize: '14px' }}>Extracted Trade Skills:</strong>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
-              {aiResult.extractedSkills?.map((s, idx) => (
-                <span key={idx} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '16px', fontSize: '13px' }}>
-                  <strong>{s.name}</strong> — <span style={{ color: '#059669', fontWeight: 'bold' }}>{s.proficiency}</span>
-                </span>
-              ))}
+          {/* AI Generated Professional Summary */}
+          {aiResult.professionalSummary && (
+            <div style={{ background: '#f3e8ff', borderLeft: '4px solid #7c3aed', padding: '10px 14px', borderRadius: '4px', marginBottom: '16px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#6d28d9', display: 'block', textTransform: 'uppercase' }}>
+                AI Professional Summary
+              </span>
+              <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#4c1d95', lineHeight: '1.4' }}>
+                {aiResult.professionalSummary}
+              </p>
             </div>
+          )}
+
+          {/* Categorized Skills with Proficiency Levels */}
+          <div style={{ marginBottom: '16px' }}>
+            <strong style={{ fontSize: '13px', color: '#334155' }}>Categorized Trade Skills & Proficiency:</strong>
+            {aiResult.categorizedSkills?.map((catGroup, cIdx) => (
+              <div key={cIdx} style={{ marginTop: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>● {catGroup.categoryName}</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '6px' }}>
+                  {catGroup.skills.map((s, sIdx) => (
+                    <span key={sIdx} style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '4px 10px', borderRadius: '12px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <strong>{s.name}</strong>
+                      <span style={{ 
+                        background: s.proficiency === 'Expert' ? '#dcfce7' : s.proficiency === 'Intermediate' ? '#e0e7ff' : '#fef3c7',
+                        color: s.proficiency === 'Expert' ? '#166534' : s.proficiency === 'Intermediate' ? '#3730a3' : '#92400e',
+                        padding: '2px 6px',
+                        borderRadius: '8px',
+                        fontSize: '10px',
+                        fontWeight: 'bold'
+                      }}>
+                        {s.proficiency}
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
