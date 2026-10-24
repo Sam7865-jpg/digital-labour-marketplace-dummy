@@ -16,7 +16,27 @@ app.use(cors({
 
 app.use(express.json());
 
-// Base Health Check Route (handles both / and /api)
+// Middleware to guarantee DB Connection before any API route executes
+const connectDB = async (req, res, next) => {
+  if (mongoose.connection.readyState >= 1) {
+    return next();
+  }
+  try {
+    if (!process.env.MONGO_URI) {
+      throw new Error("MONGO_URI environment variable missing!");
+    }
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log('MongoDB connected successfully.');
+    next();
+  } catch (err) {
+    console.error('DB Connection Error:', err);
+    return res.status(500).json({ message: 'Database connection failed', error: err.message });
+  }
+};
+
+app.use('/api', connectDB);
+
+// Base Health Check Route
 app.get(['/', '/api'], (req, res) => {
   res.json({ message: "Backend API is running on Vercel!" });
 });
@@ -26,12 +46,6 @@ app.use('/api/workers', workerRoutes);
 app.use('/api/worker', workerRoutes);
 app.use('/api/workers', skillRoutes);
 app.use('/api/worker', skillRoutes);
-
-if (process.env.MONGO_URI) {
-  mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log('MongoDB Database connected successfully.'))
-    .catch((err) => console.error('DB Connection Error:', err));
-}
 
 const PORT = process.env.PORT || 5000;
 if (!process.env.VERCEL) {
