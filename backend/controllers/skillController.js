@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import SkillProfile from "../models/SkillProfile.js";
 
-// Bilingual Dictionary for Roman Urdu & English Keyword Mapping
 const BILINGUAL_DICTIONARY = {
   plumbing: {
     category: 'Plumbing & Sanitary Work',
@@ -66,12 +66,35 @@ const BILINGUAL_DICTIONARY = {
   }
 };
 
+// Helper: Group skills flat list into Service Category Objects
+const groupSkillsByCategory = (skillsList, mainCategory) => {
+  const groupedMap = {};
+
+  skillsList.forEach(item => {
+    const catName = item.category || mainCategory || 'General Trade';
+    if (!groupedMap[catName]) {
+      groupedMap[catName] = [];
+    }
+    groupedMap[catName].push({
+      name: item.name,
+      proficiency: item.proficiency || 'Intermediate'
+    });
+  });
+
+  return Object.keys(groupedMap).map(cat => ({
+    categoryName: cat,
+    skills: groupedMap[cat]
+  }));
+};
+
 export const generateAiSkillProfile = async (req, res) => {
   try {
     const { experienceText = '', category = '', experienceYears = '1', toolsOperated = '' } = req.body;
     const combinedText = `${category} ${toolsOperated} ${experienceText}`.toLowerCase();
 
-    // 1. Attempt Gemini AI API Call
+    let outputData = null;
+
+    // 1. Gemini AI API Call
     const apiKey = process.env.GEMINI_API_KEY;
     if (apiKey) {
       try {
@@ -80,81 +103,80 @@ export const generateAiSkillProfile = async (req, res) => {
 
         const prompt = `
           You are an AI Skill Profiler for a digital labor marketplace in Pakistan.
-          Analyze the input text (which may contain English, Urdu, or Roman Urdu terms like 'bijli', 'nal', 'chinai', 'lakri').
+          Analyze input:
+          Category: "${category}"
+          Years: "${experienceYears}"
+          Tools: "${toolsOperated}"
+          Bio: "${experienceText}"
 
-          Input Details:
-          - Stated Trade/Category: "${category}"
-          - Experience Years: "${experienceYears}"
-          - Tools Operated: "${toolsOperated}"
-          - Experience Bio: "${experienceText}"
-
-          Respond ONLY with a raw JSON object (no markdown, no backticks):
+          Return ONLY a raw JSON object:
           {
-            "category": "Standard Trade Category (e.g., Plumbing & Sanitary Work, Electrical & Wiring, etc.)",
-            "professionalSummary": "A concise professional 2-line summary of worker's trade expertise",
+            "category": "Service Category",
+            "professionalSummary": "Concise 2-line summary",
             "extractedSkills": [
-              { "name": "Skill Name", "proficiency": "Beginner|Intermediate|Expert", "category": "Trade Category" }
+              { "name": "Skill Name", "proficiency": "Beginner|Intermediate|Expert", "category": "Service Category Name" }
             ],
-            "potentialSkills": ["Suggested Skill 1", "Suggested Skill 2", "Suggested Skill 3"]
+            "potentialSkills": ["Skill 1", "Skill 2"]
           }
         `;
 
         const result = await model.generateContent(prompt);
-        let responseText = result.response.text().trim();
-        responseText = responseText.replace(/```json|```/g, "").trim();
+        let responseText = result.response.text().trim().replace(/```json|```/g, "").trim();
+        const parsed = JSON.parse(responseText);
 
-        const aiProfileData = JSON.parse(responseText);
-
-        return res.status(200).json({
-          success: true,
-          message: "AI Skill Profile generated successfully via Gemini API",
-          data: aiProfileData
-        });
+        outputData = {
+          category: parsed.category || category || 'General Trade',
+          professionalSummary: parsed.professionalSummary,
+          categorizedSkills: groupSkillsByCategory(parsed.extractedSkills || [], parsed.category || category),
+          potentialSkills: parsed.potentialSkills || []
+        };
       } catch (geminiError) {
-        console.warn("Gemini API call failed, activating Smart Bilingual Fallback:", geminiError.message);
+        console.warn("Gemini API skipped/failed, using Smart Fallback:", geminiError.message);
       }
     }
 
-    // 2. Smart Bilingual Fallback Dictionary Engine
-    let matchedTrade = 'plumbing';
-    let maxMatchCount = 0;
+    // 2. Smart Fallback Engine
+    if (!outputData) {
+      let matchedTrade = 'plumbing';
+      let maxMatchCount = 0;
 
-    Object.keys(BILINGUAL_DICTIONARY).forEach(tradeKey => {
-      const keywords = BILINGUAL_DICTIONARY[tradeKey].keywords;
-      const matchCount = keywords.reduce((acc, word) => combinedText.includes(word) ? acc + 1 : acc, 0);
-      if (matchCount > maxMatchCount) {
-        maxMatchCount = matchCount;
-        matchedTrade = tradeKey;
-      }
-    });
+      Object.keys(BILINGUAL_DICTIONARY).forEach(tradeKey => {
+        const keywords = BILINGUAL_DICTIONARY[tradeKey].keywords;
+        const matchCount = keywords.reduce((acc, word) => combinedText.includes(word) ? acc + 1 : acc, 0);
+        if (matchCount > maxMatchCount) {
+          maxMatchCount = matchCount;
+          matchedTrade = tradeKey;
+        }
+      });
 
-    const tradeData = BILINGUAL_DICTIONARY[matchedTrade];
+      const tradeData = BILINGUAL_DICTIONARY[matchedTrade];
+      const years = parseInt(experienceYears) || 1;
+      const baseProficiency = years >= 5 ? 'Expert' : years >= 2 ? 'Intermediate' : 'Beginner';
 
-    // Determine Proficiency based on Experience Years
-    const years = parseInt(experienceYears) || 1;
-    const baseProficiency = years >= 5 ? 'Expert' : years >= 2 ? 'Intermediate' : 'Beginner';
-
-    const fallbackData = {
-      category: tradeData.category,
-      professionalSummary: `Skilled professional with ${years} year(s) of experience in ${tradeData.category}. Proficient in operating ${toolsOperated || 'standard trade tools'} with hands-on field expertise.`,
-      extractedSkills: tradeData.defaultSkills.map(s => ({
-        ...s,
+      const rawSkills = tradeData.defaultSkills.map(s => ({
+        name: s.name,
         proficiency: baseProficiency,
         category: tradeData.category
-      })),
-      potentialSkills: tradeData.potentialSkills
-    };
+      }));
+
+      outputData = {
+        category: tradeData.category,
+        professionalSummary: `Skilled professional with ${years} year(s) of experience in ${tradeData.category}. Proficient in operating ${toolsOperated || 'standard trade tools'} with hands-on field expertise.`,
+        categorizedSkills: groupSkillsByCategory(rawSkills, tradeData.category),
+        potentialSkills: tradeData.potentialSkills
+      };
+    }
 
     return res.status(200).json({
       success: true,
-      message: "AI Skill Profile generated via Smart Bilingual Engine",
-      data: fallbackData
+      message: "AI Skill Profile generated and categorized successfully",
+      data: outputData
     });
 
   } catch (error) {
     return res.status(500).json({
       success: false,
-      message: error.message || "Failed to generate AI Skill Profile"
+      message: error.message || "Failed to generate skill profile"
     });
   }
 };
