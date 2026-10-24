@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://digital-labour-marketplace-dummy-ba.vercel.app';
+
 const SkillProfiler = ({ initialCategory = '' }) => {
   const [experienceText, setExperienceText] = useState('');
   const [category, setCategory] = useState(initialCategory);
@@ -17,11 +19,12 @@ const SkillProfiler = ({ initialCategory = '' }) => {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/skills/generate-ai-profile', {
+      const res = await fetch(`${API_BASE_URL}/api/skills/generate-ai-profile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ experienceText, category })
       });
+      
       const data = await res.json();
       setLoading(false);
 
@@ -32,7 +35,7 @@ const SkillProfiler = ({ initialCategory = '' }) => {
       }
     } catch (err) {
       setLoading(false);
-      setError('Server se connectivity issue hai.');
+      setError('Server se connectivity issue hai. API URL check karein.');
     }
   };
 
@@ -81,7 +84,7 @@ const SkillProfiler = ({ initialCategory = '' }) => {
           />
         </div>
 
-        {error && <p style={{ color: '#dc2626', fontSize: '14px' }}>{error}</p>}
+        {error && <p style={{ color: '#dc2626', fontSize: '14px', fontWeight: 'bold' }}>{error}</p>}
 
         <button 
           type="submit" 
