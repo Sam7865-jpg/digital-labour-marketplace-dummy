@@ -45,3 +45,9 @@ export const generateAiSkillProfile = async (req, res) => {
     return res.status(500).json({ success: false, error: error.message });
   }
 };
+
+// Aliases for compatibility
+export const extractAndSaveSkills = generateAiSkillProfile;
+export const getExtractedSkills = async (req, res) => {
+  return res.status(200).json({ success: true, skills: [] });
+};

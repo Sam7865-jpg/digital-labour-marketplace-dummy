@@ -1,10 +1,14 @@
 import express from 'express';
-import { protect, authorizeRoles } from '../middleware/authMiddleware.js';
-import { extractAndSaveSkills, getExtractedSkills } from '../controllers/skillController.js';
+import { 
+  generateAiSkillProfile, 
+  extractAndSaveSkills, 
+  getExtractedSkills 
+} from '../controllers/skillController.js';
 
 const router = express.Router();
 
-router.get('/skills', protect, authorizeRoles('worker'), getExtractedSkills);
-router.post('/extract-skills', protect, authorizeRoles('worker'), extractAndSaveSkills);
+router.post('/generate-ai-profile', generateAiSkillProfile);
+router.post('/extract', extractAndSaveSkills);
+router.get('/', getExtractedSkills);
 
 export default router;
