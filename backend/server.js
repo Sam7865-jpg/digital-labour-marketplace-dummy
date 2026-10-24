@@ -16,8 +16,8 @@ app.use(cors({
 
 app.use(express.json());
 
-// Base Health Check Route
-app.get('/api', (req, res) => {
+// Base Health Check Route (handles both / and /api)
+app.get(['/', '/api'], (req, res) => {
   res.json({ message: "Backend API is running on Vercel!" });
 });
 
