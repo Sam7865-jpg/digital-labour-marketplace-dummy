@@ -3,32 +3,35 @@ import Navbar from '../components/Navbar';
 import SkillProfiler from '../components/SkillProfiler';
 
 const WorkerProfile = () => {
-  const [profile, setProfile] = useState({
-    name: 'Alialllll',
-    trade: 'Plumber',
-    category: 'Home Maintenance',
-    experienceYears: 5,
-    hourlyRate: 1200,
-    city: 'Islamabad',
-    sector: 'H-8/4',
-    bio: ''
-  });
+  // Load initial profile with fallback defaults or localStorage
+  const getInitialProfile = () => {
+    const saved = localStorage.getItem('workerProfileData');
+    if (saved) {
+      try { return JSON.parse(saved); } catch(e){}
+    }
+    return {
+      name: 'Alialllll',
+      trade: 'Plumber',
+      category: 'Home Maintenance',
+      experienceYears: 5,
+      hourlyRate: 1200,
+      city: 'Islamabad',
+      sector: 'H-8/4',
+      summary: '',
+      skills: []
+    };
+  };
 
-  const [aiSummary, setAiSummary] = useState('');
-  const [aiSkills, setAiSkills] = useState([]);
-  
+  const [profile, setProfile] = useState(getInitialProfile);
   const [isProfileCreated, setIsProfileCreated] = useState(true);
   const [showProfilerModal, setShowProfilerModal] = useState(false);
   const [message, setMessage] = useState('');
 
-  // Handle Live Sync from AI Profiler
+  // Live Sync Handler triggered from AI Skill Profiler
   const handleProfileSynced = (aiData) => {
-    if (aiData.professionalSummary) {
-      setAiSummary(aiData.professionalSummary);
-    }
-
+    const summaryText = aiData.professionalSummary || `${profile.trade} specialist with verified practical field experience.`;
+    
     let extractedList = [];
-
     if (aiData.categorizedSkills && aiData.categorizedSkills.length > 0) {
       aiData.categorizedSkills.forEach(group => {
         if (group.skills) {
@@ -44,14 +47,24 @@ const WorkerProfile = () => {
       }));
     }
 
-    setAiSkills(extractedList);
+    const updatedProfile = {
+      ...profile,
+      summary: summaryText,
+      skills: extractedList
+    };
+
+    // Update React State & LocalStorage
+    setProfile(updatedProfile);
+    localStorage.setItem('workerProfileData', JSON.stringify(updatedProfile));
+    
     setMessage('✨ Digital Identity Card live updated with AI Verified Skills & Summary!');
-    setShowProfilerModal(false); // Modal auto-close taake user ko card pe live change nazar aaye
+    setShowProfilerModal(false); // Auto close modal to show updated ID card instantly
     setTimeout(() => setMessage(''), 5000);
   };
 
   const handleSaveProfile = (e) => {
     e.preventDefault();
+    localStorage.setItem('workerProfileData', JSON.stringify(profile));
     setIsProfileCreated(true);
     setMessage('Profile successfully updated!');
     setTimeout(() => setMessage(''), 3000);
@@ -92,7 +105,7 @@ const WorkerProfile = () => {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '24px' }}>
           
-          {/* LABOUR IDENTITY CARD (Live Updated with AI Data) */}
+          {/* LABOUR IDENTITY CARD */}
           <div style={{ background: '#0f172a', color: '#fff', padding: '24px', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <span style={{ fontSize: '11px', fontWeight: 'bold', letterSpacing: '1px', color: '#94a3b8' }}>LABOUR IDENTITY CARD</span>
@@ -121,19 +134,19 @@ const WorkerProfile = () => {
             </div>
 
             {/* AI Verified Summary Section */}
-            {aiSummary && (
+            {profile.summary && (
               <div style={{ background: '#1e293b', padding: '12px', borderRadius: '8px', marginBottom: '16px', borderLeft: '4px solid #a855f7' }}>
                 <span style={{ fontSize: '10px', color: '#c084fc', fontWeight: 'bold', letterSpacing: '0.5px' }}>✨ AI VERIFIED SUMMARY</span>
-                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#e2e8f0', lineHeight: '1.4' }}>{aiSummary}</p>
+                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#e2e8f0', lineHeight: '1.4' }}>{profile.summary}</p>
               </div>
             )}
 
             {/* AI Synced Skills Badges */}
-            {aiSkills.length > 0 && (
+            {profile.skills && profile.skills.length > 0 && (
               <div style={{ marginBottom: '16px' }}>
                 <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 'bold', display: 'block', marginBottom: '6px' }}>VERIFIED TRADE SKILLS</span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {aiSkills.map((s, idx) => (
+                  {profile.skills.map((s, idx) => (
                     <span key={idx} style={{ background: '#334155', color: '#f8fafc', padding: '4px 8px', borderRadius: '8px', fontSize: '11px', border: '1px solid #475569' }}>
                       {s.name} <strong style={{ color: '#34d399', fontSize: '10px' }}>({s.proficiency})</strong>
                     </span>
