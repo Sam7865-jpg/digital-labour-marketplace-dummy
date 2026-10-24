@@ -4,13 +4,13 @@ import API from '../api';
 export default function SkillProfiler() {
   const [experienceText, setExperienceText] = useState('');
   const [extractedSkills, setExtractedSkills] = useState([]);
+  const [potentialSkills, setPotentialSkills] = useState([]);
   const [message, setMessage] = useState({ text: '', type: '' });
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [userData, setUserData] = useState({});
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
 
-  // Endpoint paths - Apne backend ke according adjust karein (/worker ya /workers)
   const SKILLS_ENDPOINT = '/worker/skills';
   const EXTRACT_ENDPOINT = '/worker/extract-skills';
 
@@ -21,6 +21,7 @@ export default function SkillProfiler() {
         if (res?.data) {
           setExperienceText(res.data.experienceText || '');
           setExtractedSkills(res.data.extractedSkills || []);
+          setPotentialSkills(res.data.potentialSkills || res.data.skillProfile?.potentialSkills || []);
         }
       } catch (err) {
         console.error('Error fetching skills:', err);
@@ -53,7 +54,10 @@ export default function SkillProfiler() {
       });
 
       const skills = res.data.skillProfile ? res.data.skillProfile.extractedSkills : res.data.extractedSkills;
+      const recs = res.data.skillProfile ? res.data.skillProfile.potentialSkills : res.data.potentialSkills;
+      
       setExtractedSkills(skills || []);
+      setPotentialSkills(recs || []);
     } catch (err) {
       console.error('AI Extraction Error:', err);
       setMessage({ 
@@ -65,9 +69,8 @@ export default function SkillProfiler() {
     }
   };
 
-  // Field relevant dynamic skill recommendations
   const getRelevantSuggestions = () => {
-    const text = (experienceText + " " + extractedSkills.map(s => s.skillName).join(" ")).toLowerCase();
+    const text = (experienceText + " " + extractedSkills.map(s => s.skillName || s).join(" ")).toLowerCase();
 
     if (text.includes('electric') || text.includes('wiring') || text.includes('circuit') || text.includes('bijli')) {
       return [
@@ -242,9 +245,9 @@ export default function SkillProfiler() {
                   💡 AI Potential Skill Suggestions (Relevant to Your Field)
                 </h4>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
-                  {getRelevantSuggestions().map((suggestion, idx) => (
+                  {(potentialSkills.length > 0 ? potentialSkills : getRelevantSuggestions()).map((suggestion, idx) => (
                     <span key={idx} style={{ background: '#fef08a', color: '#713f12', padding: '4px 10px', borderRadius: '4px', fontSize: '12px', fontWeight: '600' }}>
-                      ✨ {suggestion}
+                      ✨ {typeof suggestion === 'string' ? suggestion : suggestion.skillName || suggestion}
                     </span>
                   ))}
                 </div>

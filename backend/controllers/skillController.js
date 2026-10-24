@@ -34,6 +34,7 @@ export const extractAndSaveSkills = async (req, res) => {
     }
 
     let extractedSkills = [];
+    let potentialSkills = [];
 
     if (process.env.GEMINI_API_KEY) {
       try {
@@ -41,12 +42,16 @@ export const extractAndSaveSkills = async (req, res) => {
         const modelName = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
         const model = genAI.getGenerativeModel({ model: modelName });
 
-        const prompt = `Analyze the following worker experience text and extract technical or trade skills with estimated proficiency (Beginner, Intermediate, Expert).
+        const prompt = `Analyze the following worker experience text.
+1. Extract existing technical or trade skills with estimated proficiency (Beginner, Intermediate, Expert).
+2. Recommend 3 to 4 potential related skills or certifications that this worker could add to advance their profile.
+
 Return ONLY valid raw JSON with this exact structure (no markdown formatting, no code blocks):
 {
   "skills": [
     { "skillName": "Skill Name", "proficiency": "Proficiency Level" }
-  ]
+  ],
+  "potentialSkills": ["Solar Water Heater Setup", "Gas Line Leak Detection", "Blueprint Reading"]
 }
 
 Experience Text:
@@ -60,6 +65,9 @@ ${experienceText}`;
         if (parsedData.skills && Array.isArray(parsedData.skills)) {
           extractedSkills = parsedData.skills;
         }
+        if (parsedData.potentialSkills && Array.isArray(parsedData.potentialSkills)) {
+          potentialSkills = parsedData.potentialSkills;
+        }
       } catch (geminiError) {
         console.error('Gemini extraction failed, using fallback matcher:', geminiError.message);
       }
@@ -67,23 +75,26 @@ ${experienceText}`;
 
     if (extractedSkills.length === 0) {
       extractedSkills = keywordSkillExtractor(experienceText);
+      potentialSkills = ['Basic Safety Training', 'Customer Communication', 'Tool Maintenance'];
     }
 
     let profile = await SkillProfile.findOne({ user: userId });
     if (profile) {
       profile.experienceText = experienceText;
       profile.extractedSkills = extractedSkills;
+      profile.potentialSkills = potentialSkills;
       await profile.save();
     } else {
       profile = await SkillProfile.create({
         user: userId,
         experienceText,
-        extractedSkills
+        extractedSkills,
+        potentialSkills
       });
     }
 
     return res.status(200).json({
-      message: 'Skills extracted and profile saved successfully',
+      message: 'Skills and potential recommendations saved successfully',
       skillProfile: profile
     });
   } catch (error) {
@@ -104,6 +115,7 @@ export const getExtractedSkills = async (req, res) => {
     return res.status(200).json({
       experienceText: profile.experienceText,
       extractedSkills: profile.extractedSkills,
+      potentialSkills: profile.potentialSkills || [],
       skillProfile: profile
     });
   } catch (error) {
