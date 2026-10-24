@@ -69,14 +69,14 @@ ${experienceText}`;
       extractedSkills = keywordSkillExtractor(experienceText);
     }
 
-    let profile = await SkillProfile.findOne({ userId });
+    let profile = await SkillProfile.findOne({ user: userId });
     if (profile) {
       profile.experienceText = experienceText;
       profile.extractedSkills = extractedSkills;
       await profile.save();
     } else {
       profile = await SkillProfile.create({
-        userId,
+        user: userId,
         experienceText,
         extractedSkills
       });
@@ -95,7 +95,7 @@ ${experienceText}`;
 export const getExtractedSkills = async (req, res) => {
   try {
     const userId = req.user._id;
-    const profile = await SkillProfile.findOne({ userId });
+    const profile = await SkillProfile.findOne({ user: userId });
 
     if (!profile) {
       return res.status(404).json({ message: 'No skill profile found' });
