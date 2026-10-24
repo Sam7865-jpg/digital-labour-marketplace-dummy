@@ -66,10 +66,8 @@ const BILINGUAL_DICTIONARY = {
   }
 };
 
-// Helper: Group skills flat list into Service Category Objects
 const groupSkillsByCategory = (skillsList, mainCategory) => {
   const groupedMap = {};
-
   skillsList.forEach(item => {
     const catName = item.category || mainCategory || 'General Trade';
     if (!groupedMap[catName]) {
@@ -94,7 +92,6 @@ export const generateAiSkillProfile = async (req, res) => {
 
     let outputData = null;
 
-    // 1. Gemini AI API Call
     const apiKey = process.env.GEMINI_API_KEY;
     if (apiKey) {
       try {
@@ -135,7 +132,6 @@ export const generateAiSkillProfile = async (req, res) => {
       }
     }
 
-    // 2. Smart Fallback Engine
     if (!outputData) {
       let matchedTrade = 'plumbing';
       let maxMatchCount = 0;
@@ -169,7 +165,7 @@ export const generateAiSkillProfile = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "AI Skill Profile generated and categorized successfully",
+      message: "AI Skill Profile generated successfully",
       data: outputData
     });
 
@@ -178,6 +174,41 @@ export const generateAiSkillProfile = async (req, res) => {
       success: false,
       message: error.message || "Failed to generate skill profile"
     });
+  }
+};
+
+// Endpoint to save & persist modified skill profile in MongoDB
+export const saveSkillProfile = async (req, res) => {
+  try {
+    const { primaryTrade, experienceYears, toolsOperated, professionalSummary, categorizedSkills, potentialSkills } = req.body;
+
+    let profile = await SkillProfile.findOne({ primaryTrade });
+    if (!profile) {
+      profile = new SkillProfile({
+        primaryTrade,
+        experienceYears,
+        toolsOperated: Array.isArray(toolsOperated) ? toolsOperated : (toolsOperated ? toolsOperated.split(',') : []),
+        professionalSummary,
+        categorizedSkills,
+        potentialSkills
+      });
+    } else {
+      profile.experienceYears = experienceYears || profile.experienceYears;
+      profile.professionalSummary = professionalSummary || profile.professionalSummary;
+      profile.categorizedSkills = categorizedSkills || profile.categorizedSkills;
+      profile.potentialSkills = potentialSkills || profile.potentialSkills;
+      profile.updatedAt = Date.now();
+    }
+
+    await profile.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Skill profile persisted to MongoDB successfully",
+      data: profile
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 

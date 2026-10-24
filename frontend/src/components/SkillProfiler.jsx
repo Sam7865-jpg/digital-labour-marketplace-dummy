@@ -78,6 +78,60 @@ const SkillProfiler = ({ initialCategory = '', onSyncProfile }) => {
     }
   };
 
+  // Step 5: Add Potential Skill to Active Profile & Persist in MongoDB
+  const handleAddPotentialSkill = async (skillName) => {
+    if (!aiResult) return;
+
+    const targetCategory = aiResult.category || trade || 'General Trade';
+    
+    // Copy categorized skills and add new skill under current category
+    const updatedCategorized = [...(aiResult.categorizedSkills || [])];
+    let groupIndex = updatedCategorized.findIndex(g => g.categoryName === targetCategory);
+
+    if (groupIndex === -1) {
+      updatedCategorized.push({
+        categoryName: targetCategory,
+        skills: [{ name: skillName, proficiency: 'Intermediate' }]
+      });
+    } else {
+      updatedCategorized[groupIndex].skills.push({ name: skillName, proficiency: 'Intermediate' });
+    }
+
+    // Remove from potential skills list
+    const updatedPotential = (aiResult.potentialSkills || []).filter(s => s !== skillName);
+
+    const updatedAiResult = {
+      ...aiResult,
+      categorizedSkills: updatedCategorized,
+      potentialSkills: updatedPotential
+    };
+
+    setAiResult(updatedAiResult);
+
+    // Save update to MongoDB
+    try {
+      await fetch(`${API_BASE_URL}/api/skills/save`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          primaryTrade: trade,
+          experienceYears,
+          toolsOperated,
+          professionalSummary: aiResult.professionalSummary,
+          categorizedSkills: updatedCategorized,
+          potentialSkills: updatedPotential
+        })
+      });
+    } catch (err) {
+      console.warn("DB persistence warning:", err.message);
+    }
+
+    // Trigger Live Sync if parent listener attached
+    if (onSyncProfile) {
+      onSyncProfile(updatedAiResult);
+    }
+  };
+
   const handleApplyToProfileCard = () => {
     if (aiResult && onSyncProfile) {
       onSyncProfile(aiResult);
@@ -178,13 +232,12 @@ const SkillProfiler = ({ initialCategory = '', onSyncProfile }) => {
         </button>
       </form>
 
-      {/* Step 4 Structured Skill Profile Output */}
+      {/* Structured Skill Profile Output */}
       {aiResult && (
         <div style={{ marginTop: '24px', padding: '20px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #c084fc' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <h4 style={{ color: '#5b21b6', margin: 0, fontSize: '16px' }}>Structured Worker Skill Profile</h4>
             
-            {/* Auto Sync Button */}
             <button
               onClick={handleApplyToProfileCard}
               style={{
@@ -214,7 +267,7 @@ const SkillProfiler = ({ initialCategory = '', onSyncProfile }) => {
             </div>
           )}
 
-          {/* Categorized Skills with Proficiency Levels */}
+          {/* Categorized Skills */}
           <div style={{ marginBottom: '16px' }}>
             <strong style={{ fontSize: '13px', color: '#334155' }}>Categorized Trade Skills & Proficiency:</strong>
             {aiResult.categorizedSkills?.map((catGroup, cIdx) => (
@@ -240,6 +293,40 @@ const SkillProfiler = ({ initialCategory = '', onSyncProfile }) => {
               </div>
             ))}
           </div>
+
+          {/* Step 5: Potential Growth Skills with + Add to My Profile Action */}
+          {aiResult.potentialSkills && aiResult.potentialSkills.length > 0 && (
+            <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px dashed #cbd5e1' }}>
+              <strong style={{ fontSize: '13px', color: '#d97706', display: 'block', marginBottom: '8px' }}>
+                🚀 Recommended Potential Skills (Click to Add to Profile):
+              </strong>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {aiResult.potentialSkills.map((skill, idx) => (
+                  <button 
+                    key={idx}
+                    type="button"
+                    onClick={() => handleAddPotentialSkill(skill)}
+                    style={{ 
+                      background: '#fef3c7', 
+                      color: '#92400e', 
+                      border: '1px solid #f59e0b', 
+                      padding: '6px 12px', 
+                      borderRadius: '16px', 
+                      cursor: 'pointer', 
+                      fontSize: '12px', 
+                      fontWeight: 'bold',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    <span>+ Add to My Profile</span> | <strong>{skill}</strong>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
         </div>
       )}
     </div>
