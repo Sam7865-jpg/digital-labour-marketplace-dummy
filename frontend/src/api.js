@@ -1,16 +1,22 @@
 import axios from 'axios';
 
-const API = axios.create({
-  baseURL: 'https://digital-labour-marketplace-1qhz.vercel.app/api'
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
 });
 
-// Automatically attach Bearer token if user is logged in
-API.interceptors.request.use((config) => {
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  if (user?.token) {
-    config.headers.Authorization = `Bearer ${user.token}`;
+api.interceptors.request.use((config) => {
+  const userStr = localStorage.getItem('user');
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+      if (user && user.token) {
+        config.headers.Authorization = `Bearer ${user.token}`;
+      }
+    } catch (err) {
+      console.error('Error parsing stored user token:', err);
+    }
   }
   return config;
 });
 
-export default API;
+export default api;
