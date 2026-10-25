@@ -1,75 +1,69 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from "react-router-dom";
 
-const Navbar = ({ onOpenProfiler, isProfileCreated = true }) => {
-  const navigate = useNavigate();
-  const token = localStorage.getItem('token');
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/login');
-  };
+export default function Navbar({ user, onLogout }) {
+  const location = useLocation();
 
   return (
-    <nav style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '12px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <Link to="/" style={{ fontSize: '20px', fontWeight: 'bold', color: '#0f172a', textDecoration: 'none' }}>
+    <header style={{ 
+      display: "flex", 
+      justifyContent: "space-between", 
+      alignItems: "center", 
+      padding: "15px 30px", 
+      background: "#fff", 
+      borderBottom: "1px solid #e2e8f0" 
+    }}>
+      <div style={{ fontWeight: "bold", fontSize: "1.25rem" }}>
+        <Link to="/" style={{ textDecoration: "none", color: "#0f172a" }}>
           Digital Labour Marketplace
         </Link>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        {token ? (
+      <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
+        {user?.role === "worker" && (
           <>
-            <Link to="/worker-profile" style={{ textDecoration: 'none', color: '#2563eb', fontWeight: 'bold', fontSize: '14px' }}>
+            <Link 
+              to="/worker/profile" 
+              style={{ 
+                textDecoration: "none", 
+                color: location.pathname === "/worker/profile" ? "#2563eb" : "#64748b", 
+                fontWeight: "600" 
+              }}
+            >
               Digital ID & Profile
             </Link>
 
-            {/* AI Skill Profiler Button (Profile create hone ke baad dikhega) */}
-            {isProfileCreated && onOpenProfiler && (
-              <button
-                onClick={onOpenProfiler}
-                style={{
-                  background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
-                  color: '#ffffff',
-                  border: 'none',
-                  padding: '8px 16px',
-                  borderRadius: '20px',
-                  fontSize: '13px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  boxShadow: '0 2px 8px rgba(124, 58, 237, 0.3)'
-                }}
-              >
-                <span>✨</span> AI Skill Profiler
-              </button>
+            {/* AI Skill Profiler link SIRF AI Profiler page par hi dikhega */}
+            {location.pathname === "/worker/skill-profiler" && (
+              <span style={{ color: "#10b981", fontWeight: "bold" }}>
+                AI Skill Profiler
+              </span>
             )}
-
-            <span style={{ fontSize: '13px', color: '#64748b', background: '#f1f5f9', padding: '4px 10px', borderRadius: '12px' }}>
-              {user.name || 'User'} ({user.role || 'worker'})
-            </span>
-
-            <button
-              onClick={handleLogout}
-              style={{ background: '#fee2e2', color: '#dc2626', border: 'none', padding: '6px 14px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}
-            >
-              Logout
-            </button>
-          </>
-        ) : (
-          <>
-            <Link to="/login" style={{ textDecoration: 'none', color: '#475569', fontWeight: 'bold', fontSize: '14px' }}>Sign In</Link>
-            <Link to="/register" style={{ background: '#2563eb', color: '#ffffff', padding: '8px 16px', borderRadius: '6px', textDecoration: 'none', fontWeight: 'bold', fontSize: '14px' }}>Create Account</Link>
           </>
         )}
-      </div>
-    </nav>
-  );
-};
 
-export default Navbar;
+        {user && (
+          <span style={{ background: "#f1f5f9", padding: "5px 12px", borderRadius: "20px", fontSize: "0.85rem", color: "#334155" }}>
+            {user.name || user.email} ({user.role})
+          </span>
+        )}
+
+        {user && (
+          <button 
+            onClick={onLogout} 
+            style={{ 
+              background: "#fee2e2", 
+              color: "#ef4444", 
+              border: "none", 
+              padding: "6px 14px", 
+              borderRadius: "6px", 
+              cursor: "pointer", 
+              fontWeight: "bold" 
+            }}
+          >
+            Logout
+          </button>
+        )}
+      </div>
+    </header>
+  );
+}

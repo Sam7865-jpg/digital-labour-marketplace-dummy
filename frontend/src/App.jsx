@@ -1,11 +1,13 @@
-import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 import Register from './pages/Register';
 import Login from './pages/Login';
 import WorkerProfilePage from './pages/WorkerProfilePage';
+import SkillProfilerPage from './pages/SkillProfilerPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 function NavigationBar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const token = localStorage.getItem('token');
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
@@ -36,12 +38,22 @@ function NavigationBar() {
           </Link>
         </div>
       ) : (
-        <div className="nav-links-wrap">
+        <div className="nav-links-wrap" style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           {user.role === 'worker' && (
-            <Link to="/worker-profile" style={{ textDecoration: 'none', color: '#2563eb', fontWeight: '700', fontSize: '0.88rem' }}>
-              Digital ID & Profile
-            </Link>
+            <>
+              <Link to="/worker-profile" style={{ textDecoration: 'none', color: '#2563eb', fontWeight: '700', fontSize: '0.88rem' }}>
+                Digital ID & Profile
+              </Link>
+
+              {/* AI Skill Profiler tab SIRF AI Profiler URL par hi visible hoga */}
+              {location.pathname === '/worker/skill-profiler' && (
+                <span style={{ color: '#10b981', fontWeight: '700', fontSize: '0.88rem' }}>
+                  AI Skill Profiler
+                </span>
+              )}
+            </>
           )}
+
           {user.role === 'customer' && (
             <Link to="/customer-dashboard" style={{ textDecoration: 'none', color: '#2563eb', fontWeight: '700', fontSize: '0.88rem' }}>
               Job Postings
@@ -78,6 +90,15 @@ export default function App() {
           element={
             <ProtectedRoute allowedRole="worker">
               <WorkerProfilePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/worker/skill-profiler"
+          element={
+            <ProtectedRoute allowedRole="worker">
+              <SkillProfilerPage />
             </ProtectedRoute>
           }
         />

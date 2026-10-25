@@ -69,9 +69,9 @@ app.use(async (req, res, next) => {
   }
 });
 
-// Routes
+// Routes - Fixed Singular `/api/worker` Endpoint
 app.use('/api/auth', authRoutes);
-app.use('/api/workers', workerRoutes);
+app.use('/api/worker', workerRoutes); // <-- Singular `/api/worker` kar diya hai
 app.use('/api/skills', skillRoutes);
 
 const PORT = process.env.PORT || 5000;

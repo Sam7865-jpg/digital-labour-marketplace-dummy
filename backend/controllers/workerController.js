@@ -1,65 +1,125 @@
 import WorkerProfile from '../models/WorkerProfile.js';
+import { analyzeWorkerSkillProfile } from '../utils/aiSkillProfiler.js';
 
-// GET: /api/workers/profile (Apna profile dekhna)
+// Get Profile
 export const getWorkerProfile = async (req, res) => {
   try {
-    const profile = await WorkerProfile.findOne({ user: req.user._id }).populate('user', 'name email phone');
+    const profile = await WorkerProfile.findOne({ user: req.user._id });
     if (!profile) {
-      return res.status(404).json({ message: 'Worker profile abhi nahi bana hua' });
+      return res.status(404).json({ message: 'Profile not found' });
     }
     res.json(profile);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
 
-// POST / PUT: /api/workers/profile (Profile create ya update karna)
+// Update Profile
 export const updateWorkerProfile = async (req, res) => {
   try {
-    // Frontend aur backend dono ke field names ko support karne ke liye
-    const { 
-      title, occupation, 
-      category, 
-      experience, experienceYears, 
-      hourlyRate, 
-      location, city, address, 
-      bio 
-    } = req.body;
-
-    const finalOccupation = title || occupation;
-    const finalExperience = experience ?? experienceYears;
-    const finalLocation = location || city;
-
+    const { occupation, category, experienceYears, hourlyRate, city, bio } = req.body;
     let profile = await WorkerProfile.findOne({ user: req.user._id });
 
     if (profile) {
-      // Agar pehle se bana hua hai to UPDATE karein
-      profile.occupation = finalOccupation || profile.occupation;
-      if (category) profile.category = category;
-      profile.experienceYears = finalExperience ?? profile.experienceYears;
+      profile.occupation = occupation || profile.occupation;
+      profile.category = category || profile.category;
+      profile.experienceYears = experienceYears ?? profile.experienceYears;
       profile.hourlyRate = hourlyRate ?? profile.hourlyRate;
-      profile.city = finalLocation || profile.city;
-      if (address) profile.address = address;
-      if (bio) profile.bio = bio;
-
+      profile.city = city || profile.city;
+      profile.bio = bio || profile.bio;
       await profile.save();
-      return res.json({ message: 'Profile update ho gaya', profile });
+    } else {
+      profile = await WorkerProfile.create({
+        user: req.user._id,
+        occupation,
+        category,
+        experienceYears,
+        hourlyRate,
+        city,
+        bio,
+      });
+    }
+    res.json({ message: 'Profile saved successfully', profile });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Process AI Skill Profiling (Bulletproof Fallback)
+export const processAiSkillProfiling = async (req, res) => {
+  try {
+    const { occupation, category, experienceYears, experienceDetail, experienceText, toolsUsed } = req.body;
+    
+    // Dono keys check karein taake kabhi validation fail na ho
+    const textDetail = experienceDetail || experienceText || '';
+
+    if (!textDetail || textDetail.trim().length < 10) {
+      return res.status(400).json({ 
+        message: 'Please provide at least 10 characters of experience detail.' 
+      });
     }
 
-    // Agar pehli dafa bana raha hai to CREATE karein
-    profile = await WorkerProfile.create({
-      user: req.user._id,
-      occupation: finalOccupation || 'Worker',
-      category: category || 'General',
-      experienceYears: finalExperience || 0,
-      hourlyRate: hourlyRate || 0,
-      city: finalLocation || 'Not specified',
-      address: address || '',
-      bio: bio || '',
+    let profile = await WorkerProfile.findOne({ user: req.user._id });
+    if (!profile) {
+      profile = new WorkerProfile({ user: req.user._id });
+    }
+
+    profile.occupation = occupation || profile.occupation;
+    profile.category = category || profile.category;
+    profile.experienceYears = Number(experienceYears) || profile.experienceYears;
+
+    // AI Profiler Utility Execution
+    const aiResult = analyzeWorkerSkillProfile({
+      occupation: profile.occupation,
+      category: profile.category,
+      experienceYears: profile.experienceYears,
+      experienceText: textDetail,
+      toolsUsed: toolsUsed || [],
     });
 
-    res.status(201).json({ message: 'Profile kamyabi se ban gaya', profile });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+    profile.skills = aiResult.extractedSkills;
+    profile.skillStrengthScore = aiResult.skillStrengthScore;
+    profile.experienceTierBadge = aiResult.tierBadge;
+    profile.aiSkillSummary = aiResult.aiSummary;
+
+    await profile.save();
+
+    res.json({
+      workerProfile: profile,
+      recommendedSkills: aiResult.recommendedSkills,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Add Recommended Skill
+export const addRecommendedSkill = async (req, res) => {
+  try {
+    const { skillName, category, proficiencyLevel } = req.body;
+    const profile = await WorkerProfile.findOne({ user: req.user._id });
+
+    if (!profile) {
+      return res.status(404).json({ message: 'Profile not found' });
+    }
+
+    const exists = profile.skills.some(
+      (s) => s.skillName.toLowerCase() === skillName.toLowerCase()
+    );
+
+    if (!exists) {
+      profile.skills.push({
+        skillName,
+        category: category || profile.category,
+        proficiencyLevel: proficiencyLevel || 'Intermediate',
+        confidenceScore: 85,
+        source: 'recommended',
+      });
+      await profile.save();
+    }
+
+    res.json({ message: 'Skill added successfully', skills: profile.skills });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
