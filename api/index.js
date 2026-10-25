@@ -1,10 +1,11 @@
-const express = require('express');
-const cors = require('cors');
-const mongoose = require('mongoose');
+import express from 'express';
+import cors from 'cors';
+import mongoose from 'mongoose';
+import authRoutes from '../backend/routes/authRoutes.js';
+import workerRoutes from '../backend/routes/workerRoutes.js';
 
 const app = express();
 
-// Dynamic CORS middleware
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   res.setHeader("Access-Control-Allow-Origin", origin || "*");
@@ -25,7 +26,6 @@ app.use(cors({
 
 app.use(express.json());
 
-// Database connection middleware
 app.use(async (req, res, next) => {
   if (mongoose.connection.readyState !== 1 && process.env.MONGO_URI) {
     try {
@@ -37,17 +37,11 @@ app.use(async (req, res, next) => {
   next();
 });
 
-// Root API Health Check
 app.get('/', (req, res) => {
   res.status(200).json({ status: "Online", message: "Digital Labour Marketplace API is active!" });
 });
 
-// Register routes
-try {
-  app.use('/api/auth', require('../backend/routes/authRoutes'));
-  app.use('/api/worker', require('../backend/routes/workerRoutes'));
-} catch (err) {
-  console.error("Error loading backend routes:", err.message);
-}
+app.use('/api/auth', authRoutes);
+app.use('/api/worker', workerRoutes);
 
-module.exports = app;
+export default app;
