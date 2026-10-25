@@ -43,7 +43,7 @@ try {
   app.use('/api/auth', require('../backend/routes/authRoutes'));
   app.use('/api/worker', require('../backend/routes/workerRoutes'));
 } catch (err) {
-  console.error("Route Loading Error:", err.message);
+  console.error("Error loading backend routes:", err.message);
 }
 
 module.exports = app;
