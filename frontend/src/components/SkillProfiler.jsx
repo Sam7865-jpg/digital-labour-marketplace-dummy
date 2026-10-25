@@ -14,7 +14,6 @@ const SkillProfiler = ({ initialCategory = '', onSyncProfile }) => {
   const [synced, setSynced] = useState(false);
   const [error, setError] = useState('');
 
-  // Voice Input Speech-to-Text
   const handleVoiceInput = () => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
       alert("Browser speech recognition not supported. Please use Google Chrome.");
@@ -78,13 +77,10 @@ const SkillProfiler = ({ initialCategory = '', onSyncProfile }) => {
     }
   };
 
-  // Step 5: Add Potential Skill to Active Profile & Persist in MongoDB
   const handleAddPotentialSkill = async (skillName) => {
     if (!aiResult) return;
 
     const targetCategory = aiResult.category || trade || 'General Trade';
-    
-    // Copy categorized skills and add new skill under current category
     const updatedCategorized = [...(aiResult.categorizedSkills || [])];
     let groupIndex = updatedCategorized.findIndex(g => g.categoryName === targetCategory);
 
@@ -97,7 +93,6 @@ const SkillProfiler = ({ initialCategory = '', onSyncProfile }) => {
       updatedCategorized[groupIndex].skills.push({ name: skillName, proficiency: 'Intermediate' });
     }
 
-    // Remove from potential skills list
     const updatedPotential = (aiResult.potentialSkills || []).filter(s => s !== skillName);
 
     const updatedAiResult = {
@@ -108,7 +103,6 @@ const SkillProfiler = ({ initialCategory = '', onSyncProfile }) => {
 
     setAiResult(updatedAiResult);
 
-    // Save update to MongoDB
     try {
       await fetch(`${API_BASE_URL}/api/skills/save`, {
         method: 'POST',
@@ -126,7 +120,6 @@ const SkillProfiler = ({ initialCategory = '', onSyncProfile }) => {
       console.warn("DB persistence warning:", err.message);
     }
 
-    // Trigger Live Sync if parent listener attached
     if (onSyncProfile) {
       onSyncProfile(updatedAiResult);
     }
@@ -232,7 +225,7 @@ const SkillProfiler = ({ initialCategory = '', onSyncProfile }) => {
         </button>
       </form>
 
-      {/* Structured Skill Profile Output */}
+      {/* Structured Output Result */}
       {aiResult && (
         <div style={{ marginTop: '24px', padding: '20px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #c084fc' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
@@ -251,11 +244,11 @@ const SkillProfiler = ({ initialCategory = '', onSyncProfile }) => {
                 cursor: 'pointer'
               }}
             >
-              {synced ? '✓ Synced to Digital ID' : '⚡ Sync to Digital Identity Card'}
+              {synced ? '✓ Saved to Profile' : '⚡ Apply to Profile'}
             </button>
           </div>
 
-          {/* AI Generated Professional Summary */}
+          {/* AI Professional Summary */}
           {aiResult.professionalSummary && (
             <div style={{ background: '#f3e8ff', borderLeft: '4px solid #7c3aed', padding: '10px 14px', borderRadius: '4px', marginBottom: '16px' }}>
               <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#6d28d9', display: 'block', textTransform: 'uppercase' }}>
@@ -294,11 +287,11 @@ const SkillProfiler = ({ initialCategory = '', onSyncProfile }) => {
             ))}
           </div>
 
-          {/* Step 5: Potential Growth Skills with + Add to My Profile Action */}
+          {/* Potential Growth Skills */}
           {aiResult.potentialSkills && aiResult.potentialSkills.length > 0 && (
             <div style={{ marginTop: '16px', paddingTop: '14px', borderTop: '1px dashed #cbd5e1' }}>
               <strong style={{ fontSize: '13px', color: '#d97706', display: 'block', marginBottom: '8px' }}>
-                🚀 Recommended Potential Skills (Click to Add to Profile):
+                🚀 Recommended Potential Skills (Click to Add):
               </strong>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {aiResult.potentialSkills.map((skill, idx) => (
