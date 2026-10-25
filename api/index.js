@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 
 const app = express();
 
-// Global CORS Handler
+// Global CORS handling
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   res.setHeader("Access-Control-Allow-Origin", origin || "*");
@@ -18,14 +18,15 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(cors({
-  origin: true,
-  credentials: true
-}));
-
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
-// Database Connection Middleware
+// Root endpoint for testing
+app.get('/', (req, res) => {
+  res.status(200).json({ status: "Online", message: "Digital Labour Marketplace API is live!" });
+});
+
+// Lazy DB connection with error protection
 app.use(async (req, res, next) => {
   if (mongoose.connection.readyState !== 1 && process.env.MONGO_URI) {
     try {
@@ -37,15 +38,12 @@ app.use(async (req, res, next) => {
   next();
 });
 
-app.get('/', (req, res) => {
-  res.status(200).json({ status: "Online", message: "Digital Labour Marketplace API active!" });
-});
-
+// Safely attach backend routes
 try {
   app.use('/api/auth', require('../backend/routes/authRoutes'));
   app.use('/api/worker', require('../backend/routes/workerRoutes'));
 } catch (err) {
-  console.error("Error loading routes:", err.message);
+  console.error("Route Loading Error:", err.message);
 }
 
 module.exports = app;
