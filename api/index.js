@@ -1,10 +1,12 @@
-const express = require('express');
-const cors = require('cors');
-const mongoose = require('mongoose');
+import express from 'express';
+import cors from 'cors';
+import mongoose from 'mongoose';
+import authRoutes from '../backend/routes/authRoutes.js';
+import workerRoutes from '../backend/routes/workerRoutes.js';
 
 const app = express();
 
-// Dynamic CORS middleware
+// Enable Dynamic CORS
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   res.setHeader("Access-Control-Allow-Origin", origin || "*");
@@ -25,31 +27,25 @@ app.use(cors({
 
 app.use(express.json());
 
-// Lazy database connection
+// Database connection middleware
 app.use(async (req, res, next) => {
-  if (mongoose.connection.readyState !== 1) {
+  if (mongoose.connection.readyState !== 1 && process.env.MONGO_URI) {
     try {
-      if (process.env.MONGO_URI) {
-        await mongoose.connect(process.env.MONGO_URI);
-      }
+      await mongoose.connect(process.env.MONGO_URI);
     } catch (err) {
-      console.error("MongoDB connection warning:", err.message);
+      console.error("DB Connection Error:", err.message);
     }
   }
   next();
 });
 
-// Root API Health Route
+// Root API Health Check
 app.get('/', (req, res) => {
-  res.status(200).json({ status: "Online", message: "Digital Labour Marketplace API is active and running!" });
+  res.status(200).json({ status: "Online", message: "Digital Labour Marketplace API is active!" });
 });
 
-// Load routes with absolute backend resolution
-try {
-  app.use('/api/auth', require('../backend/routes/authRoutes'));
-  app.use('/api/worker', require('../backend/routes/workerRoutes'));
-} catch (err) {
-  console.error("Error loading routes:", err.message);
-}
+// Register routes
+app.use('/api/auth', authRoutes);
+app.use('/api/worker', workerRoutes);
 
-module.exports = app;
+export default app;
