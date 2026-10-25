@@ -27,8 +27,8 @@ export default function WorkerProfilePage() {
   const [formData, setFormData] = useState({
     title: "",
     category: "General",
-    experience: 0,
-    hourlyRate: 0,
+    experience: "",
+    hourlyRate: "",
     location: "",
     bio: "",
   });
@@ -44,8 +44,8 @@ export default function WorkerProfilePage() {
         setFormData({
           title: res.data.occupation || "",
           category: res.data.category || "General",
-          experience: res.data.experienceYears || 0,
-          hourlyRate: res.data.hourlyRate || 0,
+          experience: res.data.experienceYears ?? "",
+          hourlyRate: res.data.hourlyRate ?? "",
           location: res.data.city || "",
           bio: res.data.bio || "",
         });
@@ -64,8 +64,8 @@ export default function WorkerProfilePage() {
       const payload = {
         occupation: formData.title,
         category: formData.category,
-        experienceYears: Number(formData.experience),
-        hourlyRate: Number(formData.hourlyRate),
+        experienceYears: Number(formData.experience) || 0,
+        hourlyRate: Number(formData.hourlyRate) || 0,
         city: formData.location,
         bio: formData.bio,
       };
@@ -192,6 +192,7 @@ export default function WorkerProfilePage() {
                 type="number"
                 value={formData.experience}
                 onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+                placeholder="e.g. 5"
                 style={{
                   width: "100%",
                   padding: "12px 16px",
@@ -215,6 +216,7 @@ export default function WorkerProfilePage() {
                 type="number"
                 value={formData.hourlyRate}
                 onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
+                placeholder="e.g. 1200"
                 style={{
                   width: "100%",
                   padding: "12px 16px",
