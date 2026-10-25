@@ -3,7 +3,7 @@ const cors = require('cors');
 
 const app = express();
 
-// Handle CORS Preflight dynamically
+// Enable CORS
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   res.setHeader("Access-Control-Allow-Origin", origin || "*");
@@ -24,27 +24,27 @@ app.use(cors({
 
 app.use(express.json());
 
-// Safe Database Middleware with try-catch wrapper
+// Health Check Root Route
+app.get('/', (req, res) => {
+  res.status(200).json({ status: "Online", message: "Digital Labour Marketplace API is active" });
+});
+
+// Lazy load DB and routes inside handlers to protect top-level invocation
 app.use(async (req, res, next) => {
   try {
     const connectDB = require('../backend/config/db');
     await connectDB();
   } catch (err) {
-    console.error("DB Connection Warning:", err.message);
+    console.error("DB Connection Error:", err.message);
   }
   next();
 });
 
-// Load Routes safely
 try {
   app.use('/api/auth', require('../backend/routes/authRoutes'));
   app.use('/api/worker', require('../backend/routes/workerRoutes'));
 } catch (err) {
-  console.error("Route Loading Error:", err.message);
+  console.error("Route load error:", err.message);
 }
-
-app.get('/', (req, res) => {
-  res.status(200).json({ status: "Online", message: "Digital Labour Marketplace API is running cleanly!" });
-});
 
 module.exports = app;
