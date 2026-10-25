@@ -1,8 +1,6 @@
-import express from 'express';
-import cors from 'cors';
-import mongoose from 'mongoose';
-import authRoutes from '../backend/routes/authRoutes.js';
-import workerRoutes from '../backend/routes/workerRoutes.js';
+const express = require('express');
+const cors = require('cors');
+const mongoose = require('mongoose');
 
 const app = express();
 
@@ -41,7 +39,11 @@ app.get('/', (req, res) => {
   res.status(200).json({ status: "Online", message: "Digital Labour Marketplace API is active!" });
 });
 
-app.use('/api/auth', authRoutes);
-app.use('/api/worker', workerRoutes);
+try {
+  app.use('/api/auth', require('../backend/routes/authRoutes'));
+  app.use('/api/worker', require('../backend/routes/workerRoutes'));
+} catch (err) {
+  console.error("Route Loading Error:", err.message);
+}
 
-export default app;
+module.exports = app;
