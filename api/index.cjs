@@ -1,12 +1,10 @@
-import express from 'express';
-import cors from 'cors';
-import mongoose from 'mongoose';
-import authRoutes from '../backend/routes/authRoutes.js';
-import workerRoutes from '../backend/routes/workerRoutes.js';
+const express = require('express');
+const cors = require('cors');
+const mongoose = require('mongoose');
 
 const app = express();
 
-// Enable Dynamic CORS
+// Dynamic CORS middleware
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   res.setHeader("Access-Control-Allow-Origin", origin || "*");
@@ -45,7 +43,11 @@ app.get('/', (req, res) => {
 });
 
 // Register routes
-app.use('/api/auth', authRoutes);
-app.use('/api/worker', workerRoutes);
+try {
+  app.use('/api/auth', require('../backend/routes/authRoutes'));
+  app.use('/api/worker', require('../backend/routes/workerRoutes'));
+} catch (err) {
+  console.error("Error loading backend routes:", err.message);
+}
 
-export default app;
+module.exports = app;
