@@ -86,14 +86,39 @@ export default function WorkerProfilePage() {
     <div style={{ minHeight: "85vh", background: "#f8fafc", padding: "40px 24px", fontFamily: "system-ui, -apple-system, sans-serif" }}>
       <div style={{ maxWidth: "1050px", margin: "0 auto", display: "grid", gridTemplateColumns: profileData ? "340px 1fr" : "1fr", gap: "28px", alignItems: "start" }}>
         
-        {/* LEFT COLUMN: DIGITAL ID CARD (SHOWN ONCE PROFILE CREATED) */}
+        {/* LEFT COLUMN: DIGITAL ID CARD WITH DUMMY AVATAR */}
         {profileData && (
           <div style={{ background: "#ffffff", borderRadius: "20px", padding: "28px 24px", border: "1px solid #e2e8f0", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.05)" }}>
-            <h2 style={{ fontSize: "1.2rem", fontWeight: "800", color: "#0f172a", margin: "0 0 16px 0", display: "flex", alignItems: "center", gap: "8px" }}>
-              🪪 Digital ID Profile
-            </h2>
+            
+            {/* Default DP Placeholder & Worker Identity */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: "20px", textAlign: "center" }}>
+              <div style={{
+                width: "88px",
+                height: "88px",
+                borderRadius: "50%",
+                background: "#e2e8f0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                marginBottom: "12px",
+                border: "3px solid #cbd5e1",
+                boxShadow: "0 4px 10px rgba(0,0,0,0.05)"
+              }}>
+                {/* Standard Silhouette SVG */}
+                <svg width="52" height="52" viewBox="0 0 24 24" fill="#94a3b8">
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </svg>
+              </div>
 
-            {/* Profile Header Card */}
+              <h2 style={{ fontSize: "1.25rem", fontWeight: "800", color: "#0f172a", margin: 0 }}>
+                {profileData.user?.name || "Usama Asif"}
+              </h2>
+              <div style={{ fontSize: "0.85rem", color: "#2563eb", fontWeight: "700", marginTop: "2px" }}>
+                Digital ID Profile
+              </div>
+            </div>
+
+            {/* Profile Summary Card */}
             <div style={{ background: "#f1f5f9", padding: "14px", borderRadius: "12px", marginBottom: "16px" }}>
               <div style={{ fontSize: "1rem", fontWeight: "800", color: "#0f172a" }}>
                 {profileData.occupation || formData.title || "Skilled Worker"}
