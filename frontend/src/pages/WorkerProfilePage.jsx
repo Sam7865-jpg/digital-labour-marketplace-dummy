@@ -84,52 +84,71 @@ export default function WorkerProfilePage() {
 
   return (
     <div style={{ minHeight: "85vh", background: "#f8fafc", padding: "40px 24px", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-      <div style={{ maxWidth: "1050px", margin: "0 auto", display: "grid", gridTemplateColumns: profileData?.skills?.length > 0 ? "340px 1fr" : "1fr", gap: "28px", alignItems: "start" }}>
+      <div style={{ maxWidth: "1050px", margin: "0 auto", display: "grid", gridTemplateColumns: profileData ? "340px 1fr" : "1fr", gap: "28px", alignItems: "start" }}>
         
-        {/* LEFT COLUMN: STRUCTURED WORKER SKILL PROFILE CARD */}
-        {profileData?.skills?.length > 0 && (
+        {/* LEFT COLUMN: DIGITAL ID CARD (SHOWN ONCE PROFILE CREATED) */}
+        {profileData && (
           <div style={{ background: "#ffffff", borderRadius: "20px", padding: "28px 24px", border: "1px solid #e2e8f0", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.05)" }}>
             <h2 style={{ fontSize: "1.2rem", fontWeight: "800", color: "#0f172a", margin: "0 0 16px 0", display: "flex", alignItems: "center", gap: "8px" }}>
-              🪪 Digital Skill ID
+              🪪 Digital ID Profile
             </h2>
 
-            {/* Badge & Strength */}
+            {/* Profile Header Card */}
+            <div style={{ background: "#f1f5f9", padding: "14px", borderRadius: "12px", marginBottom: "16px" }}>
+              <div style={{ fontSize: "1rem", fontWeight: "800", color: "#0f172a" }}>
+                {profileData.occupation || formData.title || "Skilled Worker"}
+              </div>
+              <div style={{ fontSize: "0.82rem", color: "#64748b", marginTop: "2px" }}>
+                Category: <strong>{profileData.category || formData.category}</strong>
+              </div>
+              <div style={{ fontSize: "0.82rem", color: "#64748b", marginTop: "2px" }}>
+                Location: <strong>{profileData.city || formData.location || "Not specified"}</strong>
+              </div>
+            </div>
+
+            {/* Badge & Hourly Rate */}
             <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "14px", borderRadius: "14px", marginBottom: "18px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
                 <span style={{ background: "#2563eb", color: "#ffffff", padding: "4px 10px", borderRadius: "20px", fontSize: "0.75rem", fontWeight: "700" }}>
-                  {profileData.experienceTierBadge || "Verified Worker"}
+                  {profileData.experienceTierBadge || `${formData.experience || 0} Yrs Exp`}
                 </span>
                 <span style={{ fontSize: "0.88rem", fontWeight: "800", color: "#16a34a" }}>
-                  {profileData.skillStrengthScore || 80}% Strength
+                  PKR {profileData.hourlyRate || formData.hourlyRate || 0}/hr
                 </span>
               </div>
               <p style={{ margin: 0, fontSize: "0.82rem", color: "#334155", lineHeight: "1.4" }}>
-                {profileData.aiSkillSummary || "AI verified profile based on reported technical experience."}
+                {profileData.bio || "Profile active on Digital Labour Marketplace."}
               </p>
             </div>
 
-            {/* Extracted Verified Skills */}
+            {/* Extracted Skills Section */}
             <h3 style={{ fontSize: "0.95rem", fontWeight: "700", color: "#1e293b", margin: "0 0 10px 0" }}>
-              Verified Skills ({profileData.skills.length})
+              Extracted Skills ({profileData.skills?.length || 0})
             </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {profileData.skills.map((sk, idx) => (
-                <div key={idx} style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: "10px", border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <div>
-                    <div style={{ fontSize: "0.85rem", fontWeight: "700", color: "#0f172a" }}>{sk.skillName}</div>
-                    <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{sk.category || "General"}</div>
+            {profileData.skills && profileData.skills.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {profileData.skills.map((sk, idx) => (
+                  <div key={idx} style={{ background: "#f8fafc", padding: "10px 12px", borderRadius: "10px", border: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontSize: "0.85rem", fontWeight: "700", color: "#0f172a" }}>{sk.skillName}</div>
+                      <div style={{ fontSize: "0.75rem", color: "#64748b" }}>{sk.category || "General"}</div>
+                    </div>
+                    <span style={{ fontSize: "0.75rem", fontWeight: "700", color: "#2563eb", background: "#eff6ff", padding: "2px 8px", borderRadius: "6px" }}>
+                      {sk.proficiencyLevel || "Intermediate"}
+                    </span>
                   </div>
-                  <span style={{ fontSize: "0.75rem", fontWeight: "700", color: "#2563eb", background: "#eff6ff", padding: "2px 8px", borderRadius: "6px" }}>
-                    {sk.proficiencyLevel || "Intermediate"}
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ fontSize: "0.82rem", color: "#64748b", fontStyle: "italic", background: "#f8fafc", padding: "12px", borderRadius: "10px", textAlign: "center" }}>
+                No AI skills added yet. Use the <strong>AI Skill Profiler</strong> to extract skills automatically.
+              </div>
+            )}
           </div>
         )}
 
-        {/* RIGHT / MAIN COLUMN: WORKER DIGITAL ID FORM */}
-        <div style={{ maxWidth: profileData?.skills?.length > 0 ? "100%" : "480px", margin: profileData?.skills?.length > 0 ? "0" : "0 auto", background: "#ffffff", borderRadius: "20px", padding: "36px 32px", border: "1px solid #e2e8f0", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.05)" }}>
+        {/* RIGHT COLUMN: FORM */}
+        <div style={{ maxWidth: profileData ? "100%" : "480px", margin: profileData ? "0" : "0 auto", background: "#ffffff", borderRadius: "20px", padding: "36px 32px", border: "1px solid #e2e8f0", boxShadow: "0 10px 25px -5px rgba(0,0,0,0.05)" }}>
           
           <h1 style={{ textAlign: "center", fontSize: "1.8rem", fontWeight: "800", color: "#0f172a", margin: "0 0 6px 0", letterSpacing: "-0.5px" }}>
             Worker Digital ID
