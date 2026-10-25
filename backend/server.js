@@ -1,82 +1,49 @@
-import express from 'express';
-import cors from 'cors';
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-
-import authRoutes from './routes/authRoutes.js';
-import workerRoutes from './routes/workerRoutes.js';
-import skillRoutes from './routes/skillRoutes.js';
+const express = require('express');
+const cors = require('cors');
+const dotenv = require('dotenv');
 
 dotenv.config();
 
 const app = express();
 
+// Dynamic CORS Header Middleware
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  res.setHeader("Access-Control-Allow-Origin", origin || "*");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
+
 app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  origin: (origin, callback) => callback(null, true),
+  credentials: true
 }));
 
 app.use(express.json());
 
-app.get('/favicon.ico', (req, res) => res.status(204).end());
-
-app.get('/', (req, res) => {
-  res.status(200).json({ status: 'OK', message: 'Digital Labour Marketplace API Running' });
-});
-
-// Serverless Mongoose Connection Caching (Prevents Buffering Timeouts)
-let cached = global.mongoose;
-if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
-}
-
-const connectDB = async () => {
-  if (cached.conn && mongoose.connection.readyState === 1) {
-    return cached.conn;
-  }
-
-  if (!cached.promise) {
-    const opts = {
-      bufferCommands: false,
-      serverSelectionTimeoutMS: 5000,
-    };
-
-    cached.promise = mongoose.connect(process.env.MONGO_URI, opts).then((m) => {
-      console.log('MongoDB Connected Successfully');
-      return m;
-    });
-  }
-
-  try {
-    cached.conn = await cached.promise;
-  } catch (e) {
-    cached.promise = null;
-    console.error('MongoDB Connection Error:', e.message);
-    throw e;
-  }
-
-  return cached.conn;
-};
-
-// Ensure DB is connected BEFORE handling API routes
+// Lazy-connect DB inside a request wrapper so Vercel doesn't crash on startup
 app.use(async (req, res, next) => {
   try {
+    const connectDB = require('./config/db');
     await connectDB();
-    next();
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Database connection failed: ' + err.message });
+    console.error("DB connection error:", err.message);
   }
+  next();
 });
 
-// Routes - Fixed Singular `/api/worker` Endpoint
-app.use('/api/auth', authRoutes);
-app.use('/api/worker', workerRoutes); // <-- Singular `/api/worker` kar diya hai
-app.use('/api/skills', skillRoutes);
+// Routes
+app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/worker', require('./routes/workerRoutes'));
 
-const PORT = process.env.PORT || 5000;
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-}
+app.get('/', (req, res) => {
+  res.status(200).send('Digital Labour Marketplace API is running cleanly!');
+});
 
-export default app;
+module.exports = app;
