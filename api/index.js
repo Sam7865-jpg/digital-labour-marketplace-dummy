@@ -4,20 +4,10 @@ const mongoose = require('mongoose');
 
 const app = express();
 
-// Explicit Global CORS Middleware for Vercel Preflight Requests
+// Global CORS Handler
 app.use((req, res, next) => {
-  const allowedOrigins = [
-    'https://digital-labour-marketplace-dummy-6z.vercel.app',
-    'https://digital-labour-marketplace-dummy-uk.vercel.app'
-  ];
   const origin = req.headers.origin;
-
-  if (allowedOrigins.includes(origin) || !origin) {
-    res.setHeader("Access-Control-Allow-Origin", origin || "*");
-  } else {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-  }
-
+  res.setHeader("Access-Control-Allow-Origin", origin || "*");
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH");
   res.setHeader("Access-Control-Allow-Headers", "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization");
@@ -47,7 +37,6 @@ app.use(async (req, res, next) => {
   next();
 });
 
-// Root API Check
 app.get('/', (req, res) => {
   res.status(200).json({ status: "Online", message: "Digital Labour Marketplace API active!" });
 });

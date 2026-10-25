@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "api/index.js",
   "scripts": {
-    "start": "node backend/server.js"
+    "start": "node backend/server.js",
+    "build": "echo 'Build script executed successfully'"
   },
   "dependencies": {
     "cors": "^2.8.5",
