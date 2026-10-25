@@ -2,6 +2,24 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import API from "../api";
 
+const CATEGORY_OPTIONS = [
+  "General",
+  "Electrical & Electronics",
+  "Plumbing & Sanitary",
+  "HVAC & AC Repair",
+  "Carpentry & Woodwork",
+  "Painting & Renovation",
+  "Masonry & Construction",
+  "Welding & Metalwork",
+  "Automotive & Mechanic",
+  "Solar & Renewable Energy",
+  "Appliance Repair",
+  "Roofing & Waterproofing",
+  "Gardening & Landscaping",
+  "CCTV & Security Systems",
+  "Tile & Flooring Work"
+];
+
 export default function WorkerProfilePage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -143,8 +161,7 @@ export default function WorkerProfilePage() {
               <label style={{ display: "block", fontSize: "0.88rem", fontWeight: "600", color: "#334155", marginBottom: "6px" }}>
                 Category
               </label>
-              <input
-                type="text"
+              <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 style={{
@@ -155,10 +172,18 @@ export default function WorkerProfilePage() {
                   fontSize: "0.92rem",
                   outline: "none",
                   boxSizing: "border-box",
-                  background: "#f8fafc"
+                  background: "#f8fafc",
+                  cursor: "pointer"
                 }}
-              />
+              >
+                {CATEGORY_OPTIONS.map((cat, idx) => (
+                  <option key={idx} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
             </div>
+
             <div>
               <label style={{ display: "block", fontSize: "0.88rem", fontWeight: "600", color: "#334155", marginBottom: "6px" }}>
                 Years Experience
