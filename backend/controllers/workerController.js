@@ -2,7 +2,7 @@ const WorkerProfile = require('../models/WorkerProfile');
 const { analyzeWorkerSkillProfile } = require('../utils/aiSkillProfiler');
 
 // GET /api/worker/profile
-exports.getWorkerProfile = async (req, res) => {
+const getWorkerProfile = async (req, res) => {
   try {
     let profile = await WorkerProfile.findOne({ user: req.user.id }).populate('user', 'name email');
     if (!profile) {
@@ -16,7 +16,7 @@ exports.getWorkerProfile = async (req, res) => {
 };
 
 // POST /api/worker/profile
-exports.createOrUpdateProfile = async (req, res) => {
+const createOrUpdateProfile = async (req, res) => {
   try {
     const { occupation, category, experienceYears, hourlyRate, city, bio } = req.body;
     let profile = await WorkerProfile.findOne({ user: req.user.id });
@@ -52,7 +52,7 @@ exports.createOrUpdateProfile = async (req, res) => {
 };
 
 // POST /api/worker/ai-profile
-exports.processAiSkillProfiling = async (req, res) => {
+const processAiSkillProfiling = async (req, res) => {
   try {
     const { experienceDetail, experienceText } = req.body;
     const textToAnalyze = experienceText || experienceDetail || "";
@@ -82,7 +82,7 @@ exports.processAiSkillProfiling = async (req, res) => {
 };
 
 // POST /api/worker/add-skill (SAFE ARRAY CHECK)
-exports.addRecommendedSkill = async (req, res) => {
+const addRecommendedSkill = async (req, res) => {
   try {
     const { skillName, category } = req.body;
     let profile = await WorkerProfile.findOne({ user: req.user.id });
@@ -120,4 +120,11 @@ exports.addRecommendedSkill = async (req, res) => {
     console.error("Error adding skill:", err);
     return res.status(500).json({ message: "Server error adding skill" });
   }
+};
+
+module.exports = {
+  getWorkerProfile,
+  createOrUpdateProfile,
+  processAiSkillProfiling,
+  addRecommendedSkill
 };
